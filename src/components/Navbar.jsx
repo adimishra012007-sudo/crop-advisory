@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 // Reusable responsive navbar for AI Crop Advisory Chatbot
 export default function Navbar() {
@@ -51,8 +52,9 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Right Side Options (Profile/User Icon) */}
-          <div className="hidden md:flex items-center">
+          {/* Right Side Options (Profile/User Icon & Theme Toggle) */}
+          <div className="hidden md:flex items-center space-x-3">
+            <ThemeToggle />
             <button className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 p-2 rounded-full transition-colors duration-200 border border-emerald-200">
               {/* Simple Profile Avatar SVG */}
               <svg
@@ -72,8 +74,9 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
+          {/* Mobile Menu Button & Theme Toggle */}
+          <div className="md:hidden flex items-center space-x-2">
+            <ThemeToggle />
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 focus:outline-none transition"
