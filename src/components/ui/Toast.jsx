@@ -31,11 +31,10 @@ export default function Toast({
 
   return (
     <div
-      className={`fixed bottom-4 right-4 z-50 flex items-center space-x-3 px-4 py-3 rounded-lg shadow-xl border text-sm font-semibold transition-all duration-300 animate-slide-in ${
-        isSuccess
+      className={`fixed bottom-4 right-4 z-50 flex items-center space-x-3 px-4 py-3 rounded-lg shadow-xl border text-sm font-semibold transition-all duration-300 animate-slide-in ${isSuccess
           ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/80 dark:border-emerald-800 dark:text-emerald-200"
           : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/80 dark:border-red-800 dark:text-red-200"
-      }`}
+        }`}
       role="alert"
     >
       {/* Icon Graphic Indicator */}
