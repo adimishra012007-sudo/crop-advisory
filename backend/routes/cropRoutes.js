@@ -1,7 +1,11 @@
 import express from "express";
 import { cropController } from "../controllers/cropController.js";
+import { dbCheck } from "../middleware/dbCheck.js";
 
 const router = express.Router();
+
+// Verify database connection is active
+router.use(dbCheck);
 
 // Define routes in order. Note: '/search' must come BEFORE '/:id'
 router.get("/search", cropController.searchCrops);
