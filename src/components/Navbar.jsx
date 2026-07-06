@@ -1,14 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import { getUser, isAuthenticated } from "../lib/auth";
 
 // Reusable responsive navbar for AI Crop Advisory Chatbot
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    // Determine user session state on client side to avoid hydration mismatch
+    setIsLoggedIn(isAuthenticated());
+    setUser(getUser());
+
+    const handleAuthChange = () => {
+      setIsLoggedIn(isAuthenticated());
+      setUser(getUser());
+    };
+
+    window.addEventListener("auth-change", handleAuthChange);
+    return () => window.removeEventListener("auth-change", handleAuthChange);
+  }, []);
 
   // Navigation Links array
   const navLinks = [
@@ -56,7 +73,11 @@ export default function Navbar() {
           {/* Right Side Options (Profile/User Icon & Theme Toggle) */}
           <div className="hidden md:flex items-center space-x-3">
             <ThemeToggle />
-            <button className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 p-2 rounded-full transition-colors duration-200 border border-emerald-200">
+            <Link
+              href={isLoggedIn ? "/profile" : "/login"}
+              className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 p-2 rounded-full transition-colors duration-200 border border-emerald-200"
+              title={isLoggedIn ? `Profile: ${user?.name}` : "Log In"}
+            >
               {/* Simple Profile Avatar SVG */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -72,7 +93,7 @@ export default function Navbar() {
                   d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
                 />
               </svg>
-            </button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button & Theme Toggle */}
@@ -142,7 +163,11 @@ export default function Navbar() {
               );
             })}
             {/* Mobile Profile Display */}
-            <div className="border-t border-emerald-100 pt-4 pb-2 px-3 flex items-center space-x-3">
+            <Link
+              href={isLoggedIn ? "/profile" : "/login"}
+              onClick={() => setIsOpen(false)}
+              className="border-t border-emerald-100 pt-4 pb-2 px-3 flex items-center space-x-3 hover:bg-emerald-50/50 transition-colors rounded-md"
+            >
               <div className="bg-emerald-100 text-emerald-800 p-2 rounded-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -159,8 +184,10 @@ export default function Navbar() {
                   />
                 </svg>
               </div>
-              <span className="text-slate-700 font-semibold text-sm">Uttarakhand Farmer</span>
-            </div>
+              <span className="text-slate-700 font-semibold text-sm">
+                {isLoggedIn ? user?.name : "Sign In / Register"}
+              </span>
+            </Link>
           </div>
         </div>
       )}
