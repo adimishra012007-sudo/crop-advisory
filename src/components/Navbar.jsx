@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
-import { getUser, isAuthenticated } from "../lib/auth";
+import { getUser, isAuthenticated, logout } from "../lib/auth";
 
 // Reusable responsive navbar for AI Crop Advisory Chatbot
 export default function Navbar() {
@@ -30,6 +30,7 @@ export default function Navbar() {
   // Navigation Links array
   const navLinks = [
     { name: "Home", href: "/" },
+    ...(isLoggedIn ? [{ name: "Dashboard", href: "/dashboard" }] : []),
     { name: "Chatbot", href: "/chatbot" },
     { name: "Crops", href: "/crops" },
     { name: "About", href: "/about" },
@@ -94,6 +95,17 @@ export default function Navbar() {
                 />
               </svg>
             </Link>
+            {isLoggedIn && (
+              <button
+                onClick={() => {
+                  logout();
+                  window.location.href = "/";
+                }}
+                className="text-xs font-bold text-slate-500 hover:text-rose-600 dark:text-slate-450 dark:hover:text-rose-450 transition-colors px-2.5 py-1.5 border border-slate-200/80 dark:border-slate-800 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-850 cursor-pointer"
+              >
+                Logout
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button & Theme Toggle */}
@@ -188,6 +200,18 @@ export default function Navbar() {
                 {isLoggedIn ? user?.name : "Sign In / Register"}
               </span>
             </Link>
+            {isLoggedIn && (
+              <button
+                onClick={() => {
+                  logout();
+                  setIsOpen(false);
+                  window.location.href = "/";
+                }}
+                className="w-full text-left px-3 py-2 text-base font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-md transition-colors cursor-pointer block border-t border-slate-100/50 mt-1"
+              >
+                Logout
+              </button>
+            )}
           </div>
         </div>
       )}

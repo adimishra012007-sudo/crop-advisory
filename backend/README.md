@@ -125,42 +125,130 @@ On startup, the app establishes connection to Supabase and initializes tables if
 
 ## REST API Documentation
 
-### Base URL: `http://localhost:5000/api/crops`
+### Base URL: `http://localhost:5000`
+
+#### Crop Registry Endpoints (Base: `/api/crops`)
 
 | HTTP Method | Endpoint | Description | Status Codes |
 |:---|:---|:---|:---|
 | **GET** | `/` | Retrieve all crop records | `200` OK, `500` Error |
 | **GET** | `/search?q=value` | Search crop records by `cropName` (case-insensitive substring) | `200` OK, `400` Bad Request, `500` Error |
 | **GET** | `/:id` | Retrieve details for a single crop | `200` OK, `404` Not Found, `500` Error |
-| **POST** | `/` | Create a new crop record | `201` Created, `400` Validation Error, `500` Error |
-| **PUT** | `/:id` | Update an existing crop record | `200` OK, `400` Validation Error, `404` Not Found, `500` Error |
-| **DELETE** | `/:id` | Delete a crop record | `204` No Content, `404` Not Found, `500` Error |
+| **POST** | `/` | Create a new crop record (with Validation) | `201` Created, `400` Validation Error, `500` Error |
+| **PUT** | `/:id` | Update an existing crop record (with Validation) | `200` OK, `400` Validation Error, `404` Not Found, `500` Error |
+| **DELETE** | `/:id` | Delete a crop profile | `204` No Content, `404` Not Found, `500` Error |
+
+#### User & Authentication Endpoints (Base: `/api/users`)
+
+| HTTP Method | Endpoint | Description | Status Codes |
+|:---|:---|:---|:---|
+| **POST** | `/signup` | Create a new user profile (Rate Limited) | `201` Created, `400` Validation/Duplicate, `429` |
+| **POST** | `/login` | Authenticate existing user and return JWT (Rate Limited) | `200` OK, `400` Validation, `401` Unauthorized, `429` |
+| **GET** | `/profile` | Get current user's profile metadata (JWT Protected) | `200` OK, `401` Unauthorized, `500` |
+| **GET** | `/google` | Starts the Google OAuth 2.0 redirection flow | `302` Found (Redirects to Google) |
+| **GET** | `/google/callback` | Google OAuth callback handler returning JWT | `302` Found (Redirects to `/login?token=JWT`) |
 
 ---
 
-## Sample JSON Data Formats
+## 1. Google OAuth Setup Guide
+To enable Google Sign-In, obtain your API credentials from the [Google Cloud Console](https://console.cloud.google.com/):
+1. Create a new Project or select an existing one.
+2. Go to **APIs & Services > Credentials** and click **Create Credentials > OAuth client ID**.
+3. Choose **Web application** as the Application type.
+4. Under **Authorized redirect URIs**, add the backend callback URL:
+   `http://localhost:5000/api/users/google/callback`
+5. Click **Create** to obtain your Client ID and Client Secret.
+6. Paste these into your backend `.env` variables.
 
-### Crop Request Body (POST / PUT)
-```json
-{
-  "cropName": "Finger Millet (Mandua)",
-  "soilType": "Sandy loam",
-  "season": "Kharif",
-  "waterRequirement": "Low",
-  "fertilizer": "Organic Jivamrit",
-  "description": "Traditional nutritious crop grown on sloped fields."
-}
+---
+
+## 2. Environment Variables Mappings
+Add these variables to your local backend `.env` file:
+```env
+# Server
+PORT=5000
+DATABASE_URL=your_supabase_postgresql_connection_string
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your_google_oauth_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/users/google/callback
+CLIENT_REDIRECT_URL=http://localhost:3000/login
 ```
 
-### Successful JSON Response (Mapped to camelCase)
-```json
-{
-  "id": "1",
-  "cropName": "Finger Millet (Mandua)",
-  "soilType": "Sandy loam",
-  "season": "Kharif",
-  "waterRequirement": "Low",
-  "fertilizer": "Organic Jivamrit",
-  "description": "Traditional nutritious crop grown on sloped fields."
-}
+---
+
+## 3. Rate Limiting Protection
+We protect user auth endpoints (`POST /api/users/login` and `POST /api/users/signup`) using `express-rate-limit`:
+- **Limit**: 5 requests per 15-minute window per IP.
+- **Exceeded Response**: Status code `429 Too Many Requests` returning JSON:
+  ```json
+  {
+    "message": "Too many attempts. Please try again later."
+  }
+  ```
+
+---
+
+## 4. Input Validation Rules
+Input validation is enforced using `express-validator`:
+- **Signup**:
+  - `name`: Required, non-empty.
+  - `email`: Required, valid email format.
+  - `password`: Required, minimum 6 characters.
+  - `role`: Required (e.g. `farmer`, `advisor`).
+- **Login**:
+  - `email`: Required, valid email format.
+  - `password`: Required, non-empty.
+- **Crop CRUD**:
+  - `cropName`: Required, non-empty.
+  - `season`: Required, non-empty.
+  - `soilType`: Required, non-empty.
+- **Validation Error Format**:
+  ```json
+  {
+    "error": "Validation Error",
+    "details": {
+      "email": "Must be a valid email address.",
+      "password": "Password must be at least 6 characters long."
+    }
+  }
+  ```
+
+---
+
+## 5. Security & Authentication Flow
+```mermaid
+sequenceDiagram
+    participant User as Client Browser
+    participant FE as Next.js Frontend (Port 3000)
+    participant BE as Express Backend (Port 5000)
+    participant DB as PostgreSQL Database
+    participant Google as Google OAuth Server
+
+    Note over User, FE: Standard Login/Signup Flow
+    User->>FE: Fill form & click submit
+    FE->>BE: POST /api/users/login (or signup)
+    Note over BE: Middleware check: Rate Limit & express-validator
+    BE->>DB: Verify credentials / Create account
+    DB-->>BE: User data
+    BE-->>FE: Return JSON with JWT
+    FE->>FE: Save JWT & User to localStorage
+
+    Note over User, FE: Google Sign-in Flow
+    User->>FE: Click "Continue with Google"
+    FE->>BE: Navigates to GET /api/users/google
+    BE-->>User: Redirects to Google Consent Screen
+    User->>Google: Authenticates
+    Google-->>BE: Redirect with code to GET /api/users/google/callback
+    BE->>Google: Exchange code for Access Token
+    Google-->>BE: Access Token
+    BE->>Google: Fetch User Profile (email & name)
+    Google-->>BE: Profile Info
+    BE->>DB: Check if email exists
+    Note over BE, DB: If exists: login. If not: create new user.
+    BE-->>User: Redirects to FE: http://localhost:3000/login?token=JWT
+    FE->>FE: Parse URL token & fetch profile metadata
+    FE->>FE: Save JWT & User to localStorage
+    FE->>User: Route to /profile
 ```

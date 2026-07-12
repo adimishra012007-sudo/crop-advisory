@@ -105,18 +105,37 @@ npm install
 
 ## 3. REST API Endpoint Catalog
 
+#### Crops Registry Endpoints (Base: `http://localhost:5000/api/crops`)
+
 | HTTP Method | Route | Description | Expected Status |
 |:---|:---|:---|:---|
-| **GET** | `/api/crops` | Retrieve all Uttarakhand crops | `200` OK |
-| **GET** | `/api/crops/:id` | Fetch detailed information for one crop | `200` OK, `404` |
-| **GET** | `/api/crops/search?q=` | Search crops by name (live match) | `200` OK, `400` |
-| **POST** | `/api/crops` | Register a new crop profile (with validation) | `201` Created, `400` |
-| **PUT** | `/api/crops/:id` | Update properties of an existing crop profile | `200` OK, `404` |
-| **DELETE** | `/api/crops/:id` | Remove a crop profile from the registry | `204` No Content |
+| **GET** | `/` | Retrieve all Uttarakhand crops | `200` OK |
+| **GET** | `/:id` | Fetch detailed information for one crop | `200` OK, `404` |
+| **GET** | `/search?q=` | Search crops by name (live match) | `200` OK, `400` |
+| **POST** | `/` | Register a new crop profile (with express-validator) | `201` Created, `400` |
+| **PUT** | `/:id` | Update properties of an existing crop profile (with validation) | `200` OK, `400`, `404` |
+| **DELETE** | `/:id` | Remove a crop profile from the registry | `204` No Content |
+
+#### Authentication Endpoints (Base: `http://localhost:5000/api/users`)
+
+| HTTP Method | Route | Description | Expected Status |
+|:---|:---|:---|:---|
+| **POST** | `/signup` | Register new user with input validation (Rate Limited) | `201` Created, `400`, `429` |
+| **POST** | `/login` | Authenticate credentials & return JWT (Rate Limited) | `200` OK, `401`, `429` |
+| **GET** | `/profile` | Fetch active user credentials (JWT Protected) | `200` OK, `401` |
+| **GET** | `/google` | Navigates to Google consent screen for Single Sign-On | `302` Redirect |
+| **GET** | `/google/callback` | OAuth redirect handling, user provisioning, and login | `302` (Redirects to FE) |
 
 ---
 
-## 4. Design Guidelines & Features
-- **Loader Component Integration**: Spinners display automatically when querying lists, saving records, or searching.
-- **Toast Component Alerts**: Dispatches success messages on successful creation/updates/deletions and red error warnings when an API transaction fails or connection is severed.
-- **Fully Responsive & Dual Theme**: Adaptive layouts for mobile and desktop screens including premium light/dark styling.
+## 4. Key Additions & Design Implementations
+
+- **Google Sign-In**: "Continue with Google" buttons integrated seamlessly into `/login` and `/signup` with standard multi-color Google branding. Callback parses the redirected query token, fetches profile context from the server, stores authentication state, and redirects to `/profile`.
+- **Protected Pages**: Both `/profile` and the new `/dashboard` routes verify local state on render. Unauthenticated users are redirected back to `/login` immediately. If a token has expired or is invalid, the API returns a 401 Unauthorized, automatically triggering logout and routing cleanup.
+- **Farmer Dashboard**: Displays credentials, crops database count dynamically fetched from the API, active AI chatbot session count, and current account status.
+- **Dynamic Navbar Synchronization**: Dynamically updates links depending on whether a session is active:
+  - Logged In: Displays "Home", "Dashboard", "Chatbot", "Crops", "About", "Contact", the Profile Icon, and a "Logout" action.
+  - Logged Out: Hides "Dashboard" and "Logout" and points the Profile Icon to `/login`.
+- **DDoS/Brute Force Rate Limiting**: Limit of 5 logins/signups per 15 minutes per IP address. Exceeded limits throw a standard `429 Too Many Requests` error with user-friendly warnings.
+- **Input Validation**: Employs `express-validator` on all auth forms and crop management requests to block bad inputs early at the middleware level.
+- **Error Formatting**: The global error boundary intercepts database, network, validation, and status errors to format clean user-friendly notices in toasts, completely disabling developer stack trace leaks.

@@ -9,13 +9,18 @@ const AUTH_API_BASE = "http://localhost:5000/api/users";
  * @returns {Promise<Object>} The authenticated user data with JWT token.
  */
 export async function login(email, password) {
-  const response = await fetch(`${AUTH_API_BASE}/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ email, password })
-  });
+  let response;
+  try {
+    response = await fetch(`${AUTH_API_BASE}/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
+  } catch (netErr) {
+    throw new Error("Network error. Please check if the backend server is running.");
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -50,13 +55,18 @@ export async function login(email, password) {
  * @returns {Promise<Object>} Registered user details with JWT token.
  */
 export async function signup(userData) {
-  const response = await fetch(`${AUTH_API_BASE}/signup`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(userData)
-  });
+  let response;
+  try {
+    response = await fetch(`${AUTH_API_BASE}/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(userData)
+    });
+  } catch (netErr) {
+    throw new Error("Network error. Please check if the backend server is running.");
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

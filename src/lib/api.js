@@ -1,14 +1,48 @@
 // API Service Client for Crops REST endpoints.
 // Uses async/await with native fetch. Handles responses and bubbles up errors.
 
+import { getToken, logout } from "./auth";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/crops";
+
+/**
+ * Helper to perform fetch requests with automatic JWT attachment and 401 verification.
+ */
+async function request(url, options = {}) {
+  const token = getToken();
+  const headers = { ...options.headers };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers
+    });
+  } catch (netErr) {
+    throw new Error("Network error. Please check if the backend server is running.");
+  }
+
+  if (response.status === 401) {
+    logout();
+    if (typeof window !== "undefined") {
+      window.location.href = "/login?error=expired";
+    }
+    throw new Error("Session expired. Please login again.");
+  }
+
+  return response;
+}
 
 /**
  * Fetch all crop records from the backend API.
  * @returns {Promise<Array>} Promise resolving to the list of crops.
  */
 export async function getAllCrops() {
-  const response = await fetch(API_BASE);
+  const response = await request(API_BASE);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `Failed to fetch crops (Status: ${response.status})`);
@@ -22,7 +56,7 @@ export async function getAllCrops() {
  * @returns {Promise<Object>} Promise resolving to the crop record.
  */
 export async function getCrop(id) {
-  const response = await fetch(`${API_BASE}/${id}`);
+  const response = await request(`${API_BASE}/${id}`);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `Failed to fetch crop details (Status: ${response.status})`);
@@ -36,7 +70,7 @@ export async function getCrop(id) {
  * @returns {Promise<Object>} Promise resolving to the created crop record.
  */
 export async function createCrop(cropData) {
-  const response = await fetch(API_BASE, {
+  const response = await request(API_BASE, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -60,7 +94,7 @@ export async function createCrop(cropData) {
  * @returns {Promise<Object>} Promise resolving to the updated crop record.
  */
 export async function updateCrop(id, cropData) {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  const response = await request(`${API_BASE}/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json"
@@ -83,7 +117,7 @@ export async function updateCrop(id, cropData) {
  * @returns {Promise<boolean>} Promise resolving to true if deleted successfully.
  */
 export async function deleteCrop(id) {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  const response = await request(`${API_BASE}/${id}`, {
     method: "DELETE"
   });
 
@@ -102,7 +136,7 @@ export async function deleteCrop(id) {
  * @returns {Promise<Array>} Promise resolving to matching crop records.
  */
 export async function searchCrop(query) {
-  const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+  const response = await request(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `Failed to search crops (Status: ${response.status})`);

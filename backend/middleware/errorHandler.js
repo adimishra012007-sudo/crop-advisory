@@ -13,7 +13,5 @@ export const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     error: err.name || "Internal Server Error",
     message: err.message || "An unexpected error occurred on the server.",
-    // Include stack trace only in non-production environments
-    stack: process.env.NODE_ENV === "production" ? null : err.stack
   });
 };
