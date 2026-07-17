@@ -33,7 +33,7 @@ export const getGeminiChatResponse = async (userMessage) => {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    
+
     // Using stable, active gemini-3.1-flash-lite model
     const model = genAI.getGenerativeModel({
       model: "gemini-3.1-flash-lite",
@@ -54,7 +54,7 @@ export const getGeminiChatResponse = async (userMessage) => {
     );
 
     const result = await Promise.race([apiCall, timeoutPromise]);
-    
+
     if (!result || !result.response) {
       const emptyErr = new Error("Invalid or empty response structure from Gemini API.");
       emptyErr.statusCode = 502;
@@ -71,7 +71,7 @@ export const getGeminiChatResponse = async (userMessage) => {
     return responseText;
   } catch (error) {
     console.error("Gemini Service Error:", error);
-    
+
     // Propagate already formatted custom errors
     if (error.statusCode) {
       throw error;
