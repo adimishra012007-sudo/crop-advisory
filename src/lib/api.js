@@ -143,3 +143,31 @@ export async function searchCrop(query) {
   }
   return response.json();
 }
+
+/**
+ * Send user chat query to backend AI endpoint.
+ * Automatically handles JWT authentication and responses.
+ * @param {string} message - User query message.
+ * @returns {Promise<Object>} The AI response container.
+ */
+export async function askAIChat(message) {
+  // Extract base backend url by replacing '/api/crops'
+  const backendBase = process.env.NEXT_PUBLIC_API_URL 
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "") 
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/ai/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ message })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to get AI response (Status: ${response.status})`);
+  }
+  return response.json();
+}
+

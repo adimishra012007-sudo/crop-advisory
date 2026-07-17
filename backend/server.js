@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import cropRoutes from "./routes/cropRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 // Load environment variables
@@ -31,6 +32,9 @@ app.use("/api/crops", cropRoutes);
 
 // Register User/Auth routes
 app.use("/api/users", userRoutes);
+
+// Register AI routes
+app.use("/api/ai", aiRoutes);
 
 // Catch 404 and forward to error handler
 app.use(notFound);
