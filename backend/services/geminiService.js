@@ -34,9 +34,9 @@ export const getGeminiChatResponse = async (userMessage) => {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Using stable, fast gemini-1.5-flash model
+    // Using stable, active gemini-3.1-flash-lite model
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3.1-flash-lite",
       systemInstruction: SYSTEM_PROMPT,
     });
 
