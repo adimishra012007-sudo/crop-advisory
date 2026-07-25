@@ -216,5 +216,83 @@ export const ChatHistoryModel = {
     }
 
     return res.rows.length > 0;
+  },
+
+  getAnalytics: async (userId) => {
+    const intUserId = parseInt(userId, 10);
+    if (isNaN(intUserId)) {
+      return {
+        totalConversations: 0,
+        totalMessages: 0,
+        favoriteCount: 0,
+        pinnedCount: 0,
+        averageMessagesPerConversation: 0,
+        longestConversation: 0,
+        recentConversationDate: null,
+        oldestConversationDate: null,
+        topConversations: [],
+        growthTimeline: []
+      };
+    }
+
+    const statsRes = await query(
+      `SELECT 
+         COUNT(*)::int AS total_conversations,
+         COALESCE(SUM(jsonb_array_length(messages)), 0)::int AS total_messages,
+         COUNT(*) FILTER (WHERE is_favorite = true)::int AS favorite_count,
+         COUNT(*) FILTER (WHERE is_pinned = true)::int AS pinned_count,
+         COALESCE(AVG(jsonb_array_length(messages)), 0)::float AS avg_messages,
+         COALESCE(MAX(jsonb_array_length(messages)), 0)::int AS max_messages,
+         MAX(created_at) AS recent_date,
+         MIN(created_at) AS oldest_date
+       FROM chat_history
+       WHERE user_id = $1`,
+      [intUserId]
+    );
+
+    const stats = statsRes.rows[0] || {};
+
+    const conversationsRes = await query(
+      `SELECT id, COALESCE(title, session_name, 'Conversation') AS title, jsonb_array_length(messages)::int AS message_count, created_at
+       FROM chat_history
+       WHERE user_id = $1
+       ORDER BY created_at ASC`,
+      [intUserId]
+    );
+
+    const topConversations = [...conversationsRes.rows]
+      .sort((a, b) => b.message_count - a.message_count)
+      .slice(0, 5)
+      .map(c => ({
+        id: String(c.id),
+        title: c.title,
+        messageCount: c.message_count
+      }));
+
+    const dateMap = {};
+    conversationsRes.rows.forEach(c => {
+      if (c.created_at) {
+        const dateKey = new Date(c.created_at).toISOString().split('T')[0];
+        dateMap[dateKey] = (dateMap[dateKey] || 0) + 1;
+      }
+    });
+
+    const growthTimeline = Object.keys(dateMap).map(date => ({
+      date,
+      count: dateMap[date]
+    }));
+
+    return {
+      totalConversations: stats.total_conversations || 0,
+      totalMessages: stats.total_messages || 0,
+      favoriteCount: stats.favorite_count || 0,
+      pinnedCount: stats.pinned_count || 0,
+      averageMessagesPerConversation: parseFloat((stats.avg_messages || 0).toFixed(1)),
+      longestConversation: stats.max_messages || 0,
+      recentConversationDate: stats.recent_date || null,
+      oldestConversationDate: stats.oldest_date || null,
+      topConversations,
+      growthTimeline
+    };
   }
 };

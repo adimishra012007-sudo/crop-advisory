@@ -8,7 +8,8 @@ import {
   togglePin,
   toggleFavorite,
   exportConversation,
-  importConversation
+  importConversation,
+  getChatAnalytics
 } from "../controllers/chatController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { dbCheck } from "../middleware/dbCheck.js";
@@ -20,6 +21,9 @@ router.use(dbCheck);
 
 // Protect all chat routes with JWT middleware
 router.use(protect);
+
+// Get aggregated conversation analytics for logged in user
+router.get("/analytics", getChatAnalytics);
 
 // Save or update conversation
 router.post("/save", saveChat);

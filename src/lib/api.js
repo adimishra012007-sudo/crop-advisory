@@ -385,3 +385,22 @@ export async function importConversation(conversationData) {
   return response.json();
 }
 
+/**
+ * Fetch aggregated conversation analytics metrics for logged-in user.
+ * @returns {Promise<Object>} Analytics metrics object.
+ */
+export async function getChatAnalytics() {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/analytics`);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to fetch conversation analytics (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+

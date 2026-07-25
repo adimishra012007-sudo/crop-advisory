@@ -345,3 +345,23 @@ export const importConversation = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Get aggregated conversation analytics for logged-in user
+ * @route   GET /api/chat/analytics
+ * @access  Private (JWT Protected)
+ */
+export const getChatAnalytics = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const analytics = await ChatHistoryModel.getAnalytics(userId);
+
+    return res.status(200).json(analytics);
+  } catch (error) {
+    console.error("Error fetching chat analytics:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to retrieve conversation analytics."
+    });
+  }
+};
