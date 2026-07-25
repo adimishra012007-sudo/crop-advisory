@@ -3,7 +3,8 @@ import {
   saveChat,
   getChatHistory,
   getConversation,
-  deleteConversation
+  deleteConversation,
+  renameConversation
 } from "../controllers/chatController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { dbCheck } from "../middleware/dbCheck.js";
@@ -27,5 +28,8 @@ router.get("/history/:id", getConversation);
 
 // Delete single conversation by ID
 router.delete("/history/:id", deleteConversation);
+
+// Rename conversation title by ID
+router.patch("/history/:id/title", renameConversation);
 
 export default router;

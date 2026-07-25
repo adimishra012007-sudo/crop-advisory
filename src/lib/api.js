@@ -258,3 +258,30 @@ export async function deleteConversation(id) {
   return true;
 }
 
+/**
+ * Rename a chat conversation title by ID.
+ * @param {string|number} id - Conversation ID to rename.
+ * @param {string} title - New title.
+ * @returns {Promise<Object>} Updated conversation object.
+ */
+export async function renameConversation(id, title) {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/history/${id}/title`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ title })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to rename conversation (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+

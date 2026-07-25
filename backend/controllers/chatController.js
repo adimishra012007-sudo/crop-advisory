@@ -139,3 +139,46 @@ export const deleteConversation = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Rename single chat conversation title by ID
+ * @route   PATCH /api/chat/history/:id/title
+ * @access  Private (JWT Protected)
+ */
+export const renameConversation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { title } = req.body;
+
+    if (!title || typeof title !== "string" || !title.trim()) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "A valid title string is required."
+      });
+    }
+
+    const updated = await ChatHistoryModel.update(id, userId, {
+      title: title.trim()
+    });
+
+    if (!updated) {
+      return res.status(404).json({
+        error: "Not Found",
+        message: "Conversation not found or access denied."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Conversation title updated successfully.",
+      conversation: updated
+    });
+  } catch (error) {
+    console.error("Error renaming conversation:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to rename conversation."
+    });
+  }
+};
