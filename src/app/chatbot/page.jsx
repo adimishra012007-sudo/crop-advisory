@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { Toast, Loader } from "../../components/ui";
@@ -52,6 +54,54 @@ function generateAutoTitle(firstQuestion) {
   return cleaned || "Conversation";
 }
 
+// Custom Markdown Component Renderers for AI Messages
+const markdownComponents = {
+  h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-slate-900 mt-3 mb-1.5 border-b border-slate-200 pb-1" {...props} />,
+  h2: ({ node, ...props }) => <h2 className="text-base font-bold text-emerald-800 mt-3 mb-1.5" {...props} />,
+  h3: ({ node, ...props }) => <h3 className="text-sm font-bold text-slate-800 mt-2 mb-1" {...props} />,
+  p: ({ node, ...props }) => <p className="mb-2 leading-relaxed text-slate-700 font-normal last:mb-0" {...props} />,
+  ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-2 space-y-1 text-slate-700" {...props} />,
+  ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-2 space-y-1 text-slate-700" {...props} />,
+  li: ({ node, ...props }) => <li className="leading-relaxed" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-semibold text-slate-900" {...props} />,
+  em: ({ node, ...props }) => <em className="italic text-slate-800" {...props} />,
+  blockquote: ({ node, ...props }) => (
+    <blockquote className="border-l-4 border-emerald-500 pl-3 py-1 my-2 bg-emerald-50/50 rounded-r-lg text-slate-700 italic text-xs" {...props} />
+  ),
+  table: ({ node, ...props }) => (
+    <div className="overflow-x-auto my-3 rounded-xl border border-slate-200 shadow-xs">
+      <table className="w-full text-left text-xs border-collapse bg-white" {...props} />
+    </div>
+  ),
+  thead: ({ node, ...props }) => <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200" {...props} />,
+  tr: ({ node, ...props }) => <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60" {...props} />,
+  th: ({ node, ...props }) => <th className="p-2.5 font-semibold text-slate-800 border-r border-slate-200 last:border-r-0" {...props} />,
+  td: ({ node, ...props }) => <td className="p-2.5 text-slate-700 border-r border-slate-100 last:border-r-0" {...props} />,
+  a: ({ node, ...props }) => (
+    <a className="text-emerald-600 hover:text-emerald-700 font-medium underline transition" target="_blank" rel="noopener noreferrer" {...props} />
+  ),
+  hr: ({ node, ...props }) => <hr className="my-3 border-slate-200" {...props} />,
+  code: ({ node, inline, className, children, ...props }) => {
+    if (inline) {
+      return (
+        <code className="bg-slate-100 text-emerald-800 font-mono text-[12px] px-1.5 py-0.5 rounded border border-slate-200" {...props}>
+          {children}
+        </code>
+      );
+    }
+    return (
+      <div className="my-3 rounded-xl overflow-hidden border border-slate-800 bg-slate-900 text-slate-100 shadow-md">
+        <div className="bg-slate-800/80 px-3 py-1 text-[10px] text-slate-400 font-mono flex items-center justify-between border-b border-slate-700/60">
+          <span>Code Snippet</span>
+        </div>
+        <pre className="p-3.5 overflow-x-auto text-xs font-mono leading-relaxed font-normal">
+          <code {...props}>{children}</code>
+        </pre>
+      </div>
+    );
+  },
+};
+
 const DEFAULT_INITIAL_MESSAGES = [
   {
     id: 1,
@@ -78,6 +128,9 @@ export default function ChatbotPage() {
   const [editingId, setEditingId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
 
+  // Ref for auto-scrolling to latest message
+  const messagesEndRef = useRef(null);
+
   // Quick advice chips for easy selection
   const quickChips = [
     "🍎 Apple Scab Disease",
@@ -90,6 +143,11 @@ export default function ChatbotPage() {
   const triggerToast = (message, type = "success") => {
     setToast({ show: true, message, type });
   };
+
+  // Auto-scroll to bottom whenever messages or loading state change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
   // Fetch chat history from backend on initial mount
   const fetchHistory = async () => {
@@ -112,6 +170,21 @@ export default function ChatbotPage() {
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  // Copy AI response to clipboard
+  const handleCopyMessage = (text) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+    }
+    triggerToast("Copied!", "success");
+  };
 
   // Action: Start New Chat
   const handleNewChat = () => {
@@ -236,10 +309,8 @@ export default function ChatbotPage() {
       try {
         let chatTitle;
         if (!conversationId) {
-          // New conversation: Auto-generate title from the first user question
           chatTitle = generateAutoTitle(query);
         } else {
-          // Find current chat item title or fallback
           const existingItem = historyList.find((h) => h.id === conversationId);
           if (existingItem && existingItem.title && existingItem.title !== "Conversation") {
             chatTitle = existingItem.title;
@@ -264,7 +335,6 @@ export default function ChatbotPage() {
           setConversationId(savedId);
         }
 
-        // Refresh conversation sidebar
         fetchHistory();
       } catch (autoSaveErr) {
         console.warn("Silent conversation auto-save failure:", autoSaveErr.message);
@@ -358,7 +428,6 @@ export default function ChatbotPage() {
                 {/* Actions (Rename & Delete) */}
                 {!isEditing && (
                   <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-800/90 p-1 rounded-lg">
-                    {/* Rename Icon */}
                     <button
                       onClick={(e) => handleStartRename(e, chat)}
                       title="Rename Conversation"
@@ -368,7 +437,6 @@ export default function ChatbotPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                       </svg>
                     </button>
-                    {/* Delete Icon */}
                     <button
                       onClick={(e) => handleDeleteChat(e, chat)}
                       title="Delete Conversation"
@@ -498,15 +566,38 @@ export default function ChatbotPage() {
                   msg.sender === "user" ? "items-end" : "items-start"
                 }`}
               >
-                <div
-                  className={`max-w-[80%] rounded-2xl p-4 shadow-sm text-sm whitespace-pre-line ${
-                    msg.sender === "user"
-                      ? "bg-emerald-600 text-white rounded-tr-none"
-                      : "bg-white text-slate-800 border border-slate-100 rounded-tl-none"
-                  }`}
-                >
-                  {msg.text}
+                <div className="relative group max-w-[85%] sm:max-w-[80%]">
+                  <div
+                    className={`rounded-2xl p-4 shadow-sm text-sm ${
+                      msg.sender === "user"
+                        ? "bg-emerald-600 text-white rounded-tr-none whitespace-pre-line"
+                        : "bg-white text-slate-800 border border-slate-100 rounded-tl-none pr-10"
+                    }`}
+                  >
+                    {msg.sender === "user" ? (
+                      msg.text
+                    ) : (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                        {msg.text}
+                      </ReactMarkdown>
+                    )}
+                  </div>
+
+                  {/* Copy Response Button for AI Messages */}
+                  {msg.sender === "bot" && (
+                    <button
+                      onClick={() => handleCopyMessage(msg.text)}
+                      title="Copy AI Response"
+                      className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all opacity-80 hover:opacity-100 cursor-pointer flex items-center gap-1 text-[11px] font-medium"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v9.25c0 .621-.504 1.125-1.125 1.125Z" />
+                      </svg>
+                      <span>Copy</span>
+                    </button>
+                  )}
                 </div>
+
                 <span className="text-[10px] text-slate-400 mt-1.5 px-2">
                   {msg.time}
                 </span>
@@ -520,6 +611,9 @@ export default function ChatbotPage() {
                 <span className="text-xs font-semibold">AI Assistant is thinking...</span>
               </div>
             )}
+
+            {/* Ref anchor for auto-scroll */}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Form / Input area */}
