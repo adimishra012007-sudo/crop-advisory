@@ -1,94 +1,151 @@
-# Project Walkthrough - Week 7 AI Integration
+# System Architecture & Technical Walkthrough (Weeks 1–8)
 
-This document summarizes the changes, architecture, request flows, and testing status of the Google Gemini AI Advisory integration completed for Week 7.
+This document provides a comprehensive technical walkthrough of the **AI-Powered Crop Advisory System for Uttarakhand Farmers**. It details system architecture, database design, authentication mechanisms, Google Gemini AI integration, persistent chat session management, Markdown rendering, and analytics dashboards.
 
 ---
 
-## 1. Architecture Overview
-
-We have implemented a clean, decoupled architecture separating services, controllers, routing, and UI:
+## 1. System Architecture Diagram
 
 ```mermaid
 graph TD
-  FE[Next.js Chatbot Page] -->|POST api/ai/chat| API[src/lib/api.js askAIChat]
-  API -->|JWT Token in Header| ROUTE[backend/routes/aiRoutes.js]
-  ROUTE -->|protect Auth Middleware| ROUTE_OK[Route Authorized]
-  ROUTE_OK -->|dbCheck Middleware| CTRL[backend/controllers/aiController.js]
-  CTRL -->|Validate req.body.message| SERV[backend/services/geminiService.js]
-  SERV -->|systemInstruction & gemini-1.5-flash| GEMINI[Google Gemini API]
-  GEMINI -->|Text response| SERV
-  SERV -->|JSON {response}| CTRL
-  CTRL -->|HTTP 200 OK| FE
+  FE[Next.js App Router Frontend] -->|REST API Requests| CLIENT[src/lib/api.js Fetch Client]
+  CLIENT -->|JWT Bearer Header| ROUTER[backend/server.js Router]
+  
+  ROUTER -->|/api/users| USER_CTRL[userController.js]
+  ROUTER -->|/api/crops| CROP_CTRL[cropController.js]
+  ROUTER -->|/api/ai| AI_CTRL[aiController.js]
+  ROUTER -->|/api/chat| CHAT_CTRL[chatController.js]
+  
+  USER_CTRL -->|Authentication & OAuth| DB[(Supabase PostgreSQL)]
+  CROP_CTRL -->|Crop Registry CRUD| DB
+  CHAT_CTRL -->|JSONB Sessions & Aggregations| DB
+  
+  AI_CTRL -->|Prompt System Instruction| GEMINI_SERV[geminiService.js]
+  GEMINI_SERV -->|SDK Client| GEMINI_API[Google Gemini 3.1 Flash API]
 ```
 
 ---
 
-## 2. File Directory Changes
+## 2. Technical Stack Summary
 
-### Created Files
-1. **[geminiService.js](file:///d:/crop/crop-advisory/backend/services/geminiService.js)**: Configures Google Generative AI client, system instructions, timeout (15s), and handles error mapping.
-2. **[aiController.js](file:///d:/crop/crop-advisory/backend/controllers/aiController.js)**: Validates requests (ensures non-empty text), triggers the Gemini service, and replies with JSON or formats HTTP errors.
-3. **[aiRoutes.js](file:///d:/crop/crop-advisory/backend/routes/aiRoutes.js)**: Configures express routes, applies authentication checks, and binds endpoints to controllers.
-4. **[PROMPTS.md](file:///d:/crop/crop-advisory/PROMPTS.md)**: Logs the prompt engineering process, testing variations, and selecting the optimal prompt.
-5. **[walkthrough.md](file:///d:/crop/crop-advisory/walkthrough.md)**: This architecture and validation report.
-
-### Modified Files
-1. **[server.js](file:///d:/crop/crop-advisory/backend/server.js)**: Registered the new `/api/ai` endpoints.
-2. **[api.js](file:///d:/crop/crop-advisory/src/lib/api.js)**: Integrated the `askAIChat` API utility with automatic header/JWT credentials transmission.
-3. **[page.jsx](file:///d:/crop/crop-advisory/src/app/chatbot/page.jsx)**: Swapped mock responses with live backend chat connection, updated loading indicator strings, and disabled submit button when busy.
-4. **[.env.example](file:///d:/crop/crop-advisory/backend/.env.example)**: Documented `GEMINI_API_KEY` configuration.
-5. **[.env](file:///d:/crop/crop-advisory/backend/.env)**: Stored local environment development values (ignored in Git).
-6. **[README.md](file:///d:/crop/crop-advisory/README.md)**: Updated installation guidelines, architectural outlines, endpoints catalog, and troubleshooting lists.
+| Component | Technology / Library | Description |
+|:---|:---|:---|
+| **Frontend Framework** | Next.js 16 (App Router), React 19 | Server & Client Components architecture |
+| **Styling & Icons** | Vanilla CSS, TailwindCSS v4 | Sleek dark/light theme, custom cards & animations |
+| **Backend Framework** | Node.js, Express.js | Modular REST API server |
+| **Database** | Supabase PostgreSQL (`pg` pool) | Relational database with JSONB support |
+| **Authentication** | JWT (`jsonwebtoken`), bcryptjs | Bearer token auth + Google OAuth 2.0 |
+| **AI Integration** | `@google/generative-ai` SDK | Gemini 3.1 Flash API with system instructions |
+| **Markdown Engine** | `react-markdown`, `remark-gfm` | Rich Markdown, code blocks, tables, formatting |
+| **Analytics Charts** | `chart.js`, `react-chartjs-2` | Dynamically imported (`ssr: false`) Doughnut, Bar, Line charts |
 
 ---
 
-## 3. Dependencies Added
+## 3. Database Schema Overview
 
-### Backend
-- **`@google/generative-ai`** (v0.21.0 or latest): The official Google Generative AI Node.js SDK for accessing the Gemini model family.
+```mermaid
+erDiagram
+    USERS ||--o{ CHAT_HISTORY : owns
+    USERS {
+        int id PK
+        string name
+        string email UK
+        string password
+        string role
+        jsonb location
+        string phone
+        timestamp created_at
+        timestamp updated_at
+    }
+    CROPS {
+        int id PK
+        string crop_name
+        string soil_type
+        string season
+        string water_requirement
+        string fertilizer
+        text description
+        timestamp created_at
+        timestamp updated_at
+    }
+    CHAT_HISTORY {
+        int id PK
+        int user_id FK
+        string title
+        string session_name
+        jsonb messages
+        boolean is_pinned
+        boolean is_favorite
+        timestamp created_at
+        timestamp updated_at
+    }
+```
 
 ---
 
-## 4. How the AI Advisory Works
+## 4. Feature Walkthrough (Week 8 Phases 1–7)
 
-### System Instruction & Constraints
-The AI operates with an agricultural expert personality customized for Uttarakhand farming. 
-It processes queries such as season recommendations, water requirements, crop diseases, and pests. If an off-topic question is supplied (e.g. general knowledge, programming, history), it triggers a pre-trained restriction to refuse politely.
+### Phase 1: Conversation Persistence
+- PostgreSQL `chat_history` table automatically saves all user/assistant exchanges.
+- Backend controller handles `POST /api/chat/save`, `GET /api/chat/history`, `GET /api/chat/history/:id`, and `DELETE /api/chat/history/:id`.
+- Silent auto-save triggers in the background after every AI response without popups or UI interruptions.
 
-### Request Flow
-1. User enters text on the **Chatbot Page** and clicks **Send**.
-2. Frontend triggers loading animation, disables Send button, and invokes `askAIChat(message)`.
-3. `askAIChat` attaches user's JWT from `localStorage` as a Bearer authorization header and posts to `/api/ai/chat`.
-4. Backend `protect` middleware decodes the JWT and validates the user.
-5. `aiController` ensures message payload is clean, then calls `geminiService`.
+### Phase 2: ChatGPT-Style Sidebar & Session Management
+- Responsive left sidebar (desktop) and slide-over drawer (mobile).
+- `+ New Chat` button resets session canvas.
+- Inline title editing with Enter (save) and Escape (cancel).
+- Auto title generation from the first user question when default title is used (e.g., "Wheat Fertilizer").
 
-### Response Flow
-1. `geminiService` issues content request to Gemini model `gemini-1.5-flash` wrapped in a 15-second timeout promise race.
-2. Gemini returns text suggestions formatting responses with headers and lists.
-3. If successful, `aiController` maps response and returns `200 OK` JSON `{ response: "AI advice..." }`.
-4. If an error occurs (e.g. timeout, limit quota), `aiController` maps status (429, 503, 504) returning a friendly error JSON payload.
-5. Frontend receives response, stops loader, enables input fields, and renders formatted response, or presents a Toast error banner if failed.
+### Phase 3: Markdown Rendering & AI Message Formatting
+- AI (`bot`) messages render full Markdown: Headings, bold/italic, bullet/numbered lists, blockquotes, horizontal rules, links opening in new tab.
+- Styled code blocks with dark background (`bg-slate-900`), rounded borders, and horizontal overflow scrolling.
+- Bordered, responsive markdown tables.
+- **Copy Response Button** on each AI message card copying raw response text to clipboard with instant Toast feedback.
+- **Auto-Scroll** smoothly anchoring to the bottom of the chat container on new messages.
+
+### Phase 4: Chat Search & Conversation Management
+- **Instant Search Bar** filtering conversations in real time by title or message content (case-insensitive). Displays `"No conversations found"` when empty.
+- **Pinned Chats (📌)** pinned to top section with HTML5 drag-and-drop reordering.
+- **Favorite Chats (⭐)** grouped in middle section.
+- **Action Control Menu** on hover/active item for Pin/Unpin, Favorite/Unfavorite, Rename, Export, and Delete.
+
+### Phase 5: Conversation Export & Import
+- **Export (⬇)** downloads formatted JSON file `conversation-YYYY-MM-DD.json`.
+- **Import (⬆)** opens hidden file picker, validates JSON payload structure, shows Toast `"Invalid conversation file."` on invalid input, and automatically inserts valid payload into history, refreshes sidebar, and opens the chat session.
+
+### Phase 6: Conversation Analytics Dashboard
+- Aggregated PostgreSQL query endpoint `GET /api/chat/analytics`.
+- 8 statistic cards (Total Conversations, Total Messages, Favorites, Pinned Chats, Average Messages, Longest Chat, Oldest Date, Latest Date).
+- Skeleton card loading state.
+- 3 Chart.js visual charts dynamically imported:
+  1. **Doughnut Chart**: Favorites vs Regular Conversations Ratio
+  2. **Bar Chart**: Top Conversations by Message Count
+  3. **Line Chart**: Conversation Growth Timeline
+
+### Phase 7: Final Production Polish & Readiness
+- Dynamic imports (`next/dynamic`) for heavy Chart.js modules.
+- Accessibility attributes (`aria-label`, `aria-live`, `role="log"`, keyboard focus indicators).
+- Production error handling hiding stack traces while returning structured JSON.
+- Exhaustive documentation in `README.md` and `walkthrough.md`.
 
 ---
 
-## 5. Testing Checklist & Results
+## 5. Verification Matrix & Testing Results
 
-| Feature Tested | Action / Scenario | Expected Result | Status |
+| Test Scenario | Executed Action | Expected Result | Status |
 |:---|:---|:---|:---|
-| **Route Protection** | Call `POST /api/ai/chat` without authorization header. | Returns `401 Unauthorized` status. | **PASS** |
-| **Validation** | Call `POST /api/ai/chat` with empty message body. | Returns `400 Bad Request` with validation error message. | **PASS** |
-| **Farming Advisory** | Ask about Apple leaf spot disease. | Returns detailed, structured agricultural instructions. | **PASS** |
-| **Off-topic Block** | Ask: "How does blockchain work?" | Politeness refusal: redirects user to agricultural questions. | **PASS** |
-| **Error Handlers** | Simulate server down or invalid key. | Displays a Toast notification stating connection failure. | **PASS** |
-| **Loader Behavior** | Submit query on Chatbot page. | Send button disabled, Loader displays: "AI Assistant is thinking..." | **PASS** |
-| **JWT Propagation** | Check request headers on POST. | Authorization header matches `Bearer <token>`. | **PASS** |
-
----
-
-## 6. Recommended Screenshots to Capture
-
-For project submission, capture these key states:
-1. **Chatbot Interface (Loading State)**: Displaying the text "AI Assistant is thinking..." and a disabled Send button.
-2. **Agricultural Response**: Standard, nicely formatted markdown response answering a crop disease question.
-3. **Off-topic Rejection**: AI replying with the polite redirection text when queried about non-farming items.
-4. **Toast notification**: Disconnecting the backend server and submitting a query, showing the red Toast error banner on top.
+| **User Registration** | `POST /api/users/signup` with valid payload | Returns JWT token and user profile. | **PASS** |
+| **User Login** | `POST /api/users/login` with credentials | Issues Bearer JWT token. | **PASS** |
+| **Google OAuth** | Access `/api/users/google` | Redirects through OAuth callback to dashboard. | **PASS** |
+| **Crop Registry CRUD** | GET, POST, PUT, DELETE `/api/crops` | Performs PostgreSQL CRUD with validation. | **PASS** |
+| **AI Advisory Chat** | Send crop query on `/chatbot` | Gemini 3.1 Flash responds with Markdown advice. | **PASS** |
+| **Silent Auto-Save** | Receive AI response | Conversation saves to PostgreSQL `chat_history`. | **PASS** |
+| **Session Switching** | Click item in sidebar | Loads full conversation history. | **PASS** |
+| **Instant Search** | Type query in sidebar search box | Filters by title & messages content; shows no results if empty. | **PASS** |
+| **Pin / Favorite** | Click 📌 or ⭐ icon | Toggles pin/favorite state & updates list order. | **PASS** |
+| **Export JSON** | Click ⬇ Export button | Downloads `conversation-YYYY-MM-DD.json`. | **PASS** |
+| **Import JSON** | Upload valid `.json` file | Inserts conversation, refreshes sidebar, and opens session. | **PASS** |
+| **Invalid Import** | Upload non-JSON or invalid schema | Displays `"Invalid conversation file."` toast. | **PASS** |
+| **Markdown & Copy** | Inspect AI response bubble | Renders Markdown tables/lists & copies text on click. | **PASS** |
+| **Analytics Dashboard**| Load `/dashboard` | Displays 8 stat cards and 3 Chart.js charts. | **PASS** |
+| **Next.js Build** | Run `npm run build` | Compiles 13 App Router routes with zero errors. | **PASS** |

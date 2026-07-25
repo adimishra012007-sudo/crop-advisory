@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,12 +15,16 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { Doughnut, Bar, Line } from "react-chartjs-2";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { Button, Toast, Loader } from "../../components/ui";
 import { logout, getToken, getUser, isAuthenticated } from "../../lib/auth";
 import { getChatAnalytics } from "../../lib/api";
+
+// Dynamically import heavy Chart.js components for client-side rendering
+const Doughnut = dynamic(() => import("react-chartjs-2").then((mod) => mod.Doughnut), { ssr: false });
+const Bar = dynamic(() => import("react-chartjs-2").then((mod) => mod.Bar), { ssr: false });
+const Line = dynamic(() => import("react-chartjs-2").then((mod) => mod.Line), { ssr: false });
 
 // Register Chart.js elements
 ChartJS.register(
