@@ -14,7 +14,9 @@ import {
   deleteConversation,
   renameConversation,
   togglePinConversation,
-  toggleFavoriteConversation
+  toggleFavoriteConversation,
+  exportConversation,
+  importConversation
 } from "../../lib/api";
 import { getToken } from "../../lib/auth";
 
@@ -138,6 +140,9 @@ export default function ChatbotPage() {
   // Ref for auto-scrolling to latest message
   const messagesEndRef = useRef(null);
 
+  // Ref for file input element for Import
+  const fileInputRef = useRef(null);
+
   // Quick advice chips for easy selection
   const quickChips = [
     "🍎 Apple Scab Disease",
@@ -191,6 +196,90 @@ export default function ChatbotPage() {
       document.body.removeChild(textArea);
     }
     triggerToast("Copied!", "success");
+  };
+
+  // Export conversation as JSON file (⬇ Export)
+  const handleExportChat = async (e, chatItem) => {
+    e.stopPropagation();
+    try {
+      const data = await exportConversation(chatItem.id);
+      const dateStr = new Date().toISOString().split("T")[0];
+      const filename = `conversation-${dateStr}.json`;
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      triggerToast("Conversation exported successfully!", "success");
+    } catch (err) {
+      console.error(err);
+      triggerToast("Failed to export conversation.", "error");
+    }
+  };
+
+  // Trigger import file dialog (⬆ Import)
+  const handleImportClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle JSON file upload and import
+  const handleFileImportChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const content = event.target?.result;
+        if (!content || typeof content !== "string") {
+          triggerToast("Invalid conversation file.", "error");
+          return;
+        }
+
+        let parsed;
+        try {
+          parsed = JSON.parse(content);
+        } catch (parseErr) {
+          triggerToast("Invalid conversation file.", "error");
+          return;
+        }
+
+        // Validate required JSON fields
+        if (
+          !parsed ||
+          typeof parsed !== "object" ||
+          !parsed.title ||
+          typeof parsed.title !== "string" ||
+          !Array.isArray(parsed.messages) ||
+          parsed.messages.length === 0
+        ) {
+          triggerToast("Invalid conversation file.", "error");
+          return;
+        }
+
+        const res = await importConversation(parsed);
+        triggerToast("Conversation imported successfully!", "success");
+        await fetchHistory();
+
+        // Open newly imported conversation
+        const importedItem = res.conversation || res;
+        if (importedItem && importedItem.id) {
+          handleSelectChat(importedItem);
+        }
+      } catch (err) {
+        console.error(err);
+        triggerToast("Invalid conversation file.", "error");
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Action: Start New Chat
@@ -457,7 +546,7 @@ export default function ChatbotPage() {
             : "hover:bg-slate-50 text-slate-700 border-transparent hover:border-slate-200"
         }`}
       >
-        <div className="flex items-center gap-2 overflow-hidden w-full pr-20">
+        <div className="flex items-center gap-2 overflow-hidden w-full pr-24">
           <span className="text-sm flex-shrink-0">
             {isPinned ? "📌" : isFavorite ? "⭐" : "💬"}
           </span>
@@ -484,14 +573,22 @@ export default function ChatbotPage() {
           )}
         </div>
 
-        {/* Action Controls Menu (Pin, Favorite, Rename, Delete) */}
+        {/* Action Controls Menu (Export, Pin, Favorite, Rename, Delete) */}
         {!isEditing && (
-          <div className="absolute right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 dark:bg-slate-800/95 p-1 rounded-lg shadow-xs">
+          <div className="absolute right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 dark:bg-slate-800/95 p-1 rounded-lg shadow-xs">
+            {/* Export Button */}
+            <button
+              onClick={(e) => handleExportChat(e, chat)}
+              title="⬇ Export Conversation"
+              className="p-1 text-slate-400 hover:text-emerald-600 transition text-xs"
+            >
+              ⬇
+            </button>
             {/* Pin Button */}
             <button
               onClick={(e) => handleTogglePin(e, chat)}
               title={isPinned ? "Unpin Chat" : "Pin Chat"}
-              className={`p-1 transition ${isPinned ? "text-amber-600" : "text-slate-400 hover:text-amber-500"}`}
+              className={`p-1 transition text-xs ${isPinned ? "text-amber-600" : "text-slate-400 hover:text-amber-500"}`}
             >
               📌
             </button>
@@ -499,7 +596,7 @@ export default function ChatbotPage() {
             <button
               onClick={(e) => handleToggleFavorite(e, chat)}
               title={isFavorite ? "Remove Favorite" : "Favorite Chat"}
-              className={`p-1 transition ${isFavorite ? "text-yellow-500" : "text-slate-400 hover:text-yellow-500"}`}
+              className={`p-1 transition text-xs ${isFavorite ? "text-yellow-500" : "text-slate-400 hover:text-yellow-500"}`}
             >
               ⭐
             </button>
@@ -532,16 +629,35 @@ export default function ChatbotPage() {
   // Render Sidebar Content (Reused for desktop left panel and mobile drawer)
   const renderSidebarContent = () => (
     <div className="flex flex-col h-full bg-white p-4">
-      {/* New Chat Button */}
-      <button
-        onClick={handleNewChat}
-        className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer mb-3"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-        + New Chat
-      </button>
+      {/* Hidden File Input for Importing JSON */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".json"
+        onChange={handleFileImportChange}
+        style={{ display: "none" }}
+      />
+
+      {/* Top Action Buttons (+ New Chat & ⬆ Import) */}
+      <div className="flex items-center gap-2 mb-3">
+        <button
+          onClick={handleNewChat}
+          className="flex-grow flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-3 rounded-xl shadow-sm transition duration-200 cursor-pointer text-xs"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          + New Chat
+        </button>
+
+        <button
+          onClick={handleImportClick}
+          title="⬆ Import Conversation JSON"
+          className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 px-3 rounded-xl border border-slate-200 transition duration-200 cursor-pointer text-xs"
+        >
+          <span>⬆</span> Import
+        </button>
+      </div>
 
       {/* Instant Search Input Box */}
       <div className="relative mb-3 flex-shrink-0">

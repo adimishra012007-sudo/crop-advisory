@@ -339,3 +339,49 @@ export async function toggleFavoriteConversation(id, isFavorite) {
   return response.json();
 }
 
+/**
+ * Export a chat conversation as JSON payload by ID.
+ * @param {string|number} id - Conversation ID.
+ * @returns {Promise<Object>} Exported JSON payload.
+ */
+export async function exportConversation(id) {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/history/${id}/export`);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to export conversation (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Import a chat conversation from JSON payload.
+ * @param {Object} conversationData - JSON payload containing title and messages.
+ * @returns {Promise<Object>} Created conversation object.
+ */
+export async function importConversation(conversationData) {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/import`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(conversationData)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to import conversation (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+

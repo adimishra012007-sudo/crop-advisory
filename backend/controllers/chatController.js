@@ -254,3 +254,94 @@ export const toggleFavorite = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Export single chat conversation as JSON
+ * @route   GET /api/chat/history/:id/export
+ * @access  Private (JWT Protected)
+ */
+export const exportConversation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const conversation = await ChatHistoryModel.findById(id, userId);
+
+    if (!conversation) {
+      return res.status(404).json({
+        error: "Not Found",
+        message: "Conversation not found or access denied."
+      });
+    }
+
+    const exportData = {
+      title: conversation.title || "Conversation",
+      messages: conversation.messages || [],
+      createdAt: conversation.created_at || new Date().toISOString(),
+      updatedAt: conversation.updated_at || new Date().toISOString()
+    };
+
+    return res.status(200).json(exportData);
+  } catch (error) {
+    console.error("Error exporting conversation:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to export conversation."
+    });
+  }
+};
+
+/**
+ * @desc    Import a chat conversation from JSON payload
+ * @route   POST /api/chat/import
+ * @access  Private (JWT Protected)
+ */
+export const importConversation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { title, messages } = req.body;
+
+    if (!title || typeof title !== "string" || !messages || !Array.isArray(messages)) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Invalid conversation file format."
+      });
+    }
+
+    // Validate messages array structure
+    const isValidMessages = messages.every(
+      (m) => m && typeof m === "object" && (m.content !== undefined || m.text !== undefined || m.role !== undefined)
+    );
+
+    if (!isValidMessages) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Invalid messages structure in conversation file."
+      });
+    }
+
+    const formattedMessages = messages.map((m) => ({
+      role: m.role === "user" ? "user" : "assistant",
+      content: m.content || m.text || ""
+    }));
+
+    const importedConversation = await ChatHistoryModel.create({
+      userId,
+      title: title.trim() || "Imported Conversation",
+      messages: formattedMessages
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Conversation imported successfully.",
+      conversation: importedConversation,
+      ...importedConversation
+    });
+  } catch (error) {
+    console.error("Error importing conversation:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to import conversation."
+    });
+  }
+};

@@ -6,7 +6,9 @@ import {
   deleteConversation,
   renameConversation,
   togglePin,
-  toggleFavorite
+  toggleFavorite,
+  exportConversation,
+  importConversation
 } from "../controllers/chatController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { dbCheck } from "../middleware/dbCheck.js";
@@ -22,8 +24,14 @@ router.use(protect);
 // Save or update conversation
 router.post("/save", saveChat);
 
+// Import conversation from JSON file
+router.post("/import", importConversation);
+
 // Get history of all conversations for logged in user
 router.get("/history", getChatHistory);
+
+// Export single conversation as JSON by ID
+router.get("/history/:id/export", exportConversation);
 
 // Get single conversation by ID
 router.get("/history/:id", getConversation);
