@@ -12,7 +12,9 @@ import {
   getChatHistory,
   getConversation,
   deleteConversation,
-  renameConversation
+  renameConversation,
+  togglePinConversation,
+  toggleFavoriteConversation
 } from "../../lib/api";
 import { getToken } from "../../lib/auth";
 
@@ -40,7 +42,6 @@ function formatRelativeDate(dateStr) {
 function generateAutoTitle(firstQuestion) {
   if (!firstQuestion) return "Conversation";
   let cleaned = firstQuestion.trim();
-  // Strip common introductory prefixes
   cleaned = cleaned
     .replace(/^(how to resolve issues related to:?|how to|what is|what are|can you|tell me about|how do i)\s*/i, "")
     .trim();
@@ -117,6 +118,9 @@ export default function ChatbotPage() {
   const [historyList, setHistoryList] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
@@ -127,6 +131,9 @@ export default function ChatbotPage() {
   // Inline editing state for conversation titles
   const [editingId, setEditingId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
+
+  // Drag and drop state for pinned chats
+  const [draggedPinId, setDraggedPinId] = useState(null);
 
   // Ref for auto-scrolling to latest message
   const messagesEndRef = useRef(null);
@@ -237,6 +244,34 @@ export default function ChatbotPage() {
     }
   };
 
+  // Action: Toggle Pin (📌)
+  const handleTogglePin = async (e, chatItem) => {
+    e.stopPropagation();
+    const newStatus = !(chatItem.is_pinned || chatItem.isPinned);
+    try {
+      await togglePinConversation(chatItem.id, newStatus);
+      triggerToast(newStatus ? "Conversation pinned 📌" : "Conversation unpinned", "success");
+      fetchHistory();
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to update pin state.", "error");
+    }
+  };
+
+  // Action: Toggle Favorite (⭐)
+  const handleToggleFavorite = async (e, chatItem) => {
+    e.stopPropagation();
+    const newStatus = !(chatItem.is_favorite || chatItem.isFavorite);
+    try {
+      await toggleFavoriteConversation(chatItem.id, newStatus);
+      triggerToast(newStatus ? "Marked as favorite ⭐" : "Removed from favorites", "success");
+      fetchHistory();
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to update favorite state.", "error");
+    }
+  };
+
   // Action: Inline Rename - Start Editing
   const handleStartRename = (e, chatItem) => {
     e.stopPropagation();
@@ -270,6 +305,32 @@ export default function ChatbotPage() {
     } else if (e.key === "Escape") {
       setEditingId(null);
     }
+  };
+
+  // Drag and Drop handlers for Pinned chats
+  const handleDragStart = (e, chatItem) => {
+    e.dataTransfer.setData("text/plain", chatItem.id);
+    setDraggedPinId(chatItem.id);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e, targetChatItem) => {
+    e.preventDefault();
+    if (!draggedPinId || String(draggedPinId) === String(targetChatItem.id)) return;
+
+    setHistoryList((prevList) => {
+      const listCopy = [...prevList];
+      const draggedIdx = listCopy.findIndex((item) => String(item.id) === String(draggedPinId));
+      const targetIdx = listCopy.findIndex((item) => String(item.id) === String(targetChatItem.id));
+      if (draggedIdx === -1 || targetIdx === -1) return prevList;
+      const [draggedItem] = listCopy.splice(draggedIdx, 1);
+      listCopy.splice(targetIdx, 0, draggedItem);
+      return listCopy;
+    });
+    setDraggedPinId(null);
   };
 
   // Handle message sending and query the backend AI
@@ -359,13 +420,122 @@ export default function ChatbotPage() {
     setInputText(`How to resolve issues related to: ${chipText}`);
   };
 
+  // Filter conversations by Search Query (Title or Message content)
+  const filteredHistory = historyList.filter((chat) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const titleMatch = (chat.title || "").toLowerCase().includes(q);
+    const messageMatch = Array.isArray(chat.messages)
+      ? chat.messages.some((m) => (m.content || m.text || "").toLowerCase().includes(q))
+      : false;
+    return titleMatch || messageMatch;
+  });
+
+  // Group filtered history into Pinned, Favorites, and Recent
+  const pinnedChats = filteredHistory.filter((c) => c.is_pinned || c.isPinned);
+  const favoriteChats = filteredHistory.filter((c) => (c.is_favorite || c.isFavorite) && !(c.is_pinned || c.isPinned));
+  const regularChats = filteredHistory.filter((c) => !(c.is_pinned || c.isPinned) && !(c.is_favorite || c.isFavorite));
+
+  // Render a single conversation item card
+  const renderChatItem = (chat) => {
+    const isActive = conversationId === chat.id;
+    const isEditing = editingId === chat.id;
+    const isPinned = chat.is_pinned || chat.isPinned;
+    const isFavorite = chat.is_favorite || chat.isFavorite;
+
+    return (
+      <div
+        key={chat.id}
+        draggable={isPinned}
+        onDragStart={(e) => isPinned && handleDragStart(e, chat)}
+        onDragOver={(e) => isPinned && handleDragOver(e)}
+        onDrop={(e) => isPinned && handleDrop(e, chat)}
+        onClick={() => handleSelectChat(chat)}
+        className={`group relative flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-sm transition duration-150 border ${
+          isActive
+            ? "bg-emerald-50 text-emerald-900 border-emerald-200 font-semibold"
+            : "hover:bg-slate-50 text-slate-700 border-transparent hover:border-slate-200"
+        }`}
+      >
+        <div className="flex items-center gap-2 overflow-hidden w-full pr-20">
+          <span className="text-sm flex-shrink-0">
+            {isPinned ? "📌" : isFavorite ? "⭐" : "💬"}
+          </span>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editingTitle}
+              onChange={(e) => setEditingTitle(e.target.value)}
+              onKeyDown={(e) => handleKeyDownRename(e, chat.id)}
+              onBlur={() => handleSaveRename(chat.id)}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs bg-white text-slate-800 border border-emerald-400 rounded px-2 py-1 w-full focus:outline-none"
+            />
+          ) : (
+            <div className="flex flex-col overflow-hidden">
+              <span className="truncate text-xs font-medium text-slate-800 group-hover:text-emerald-700">
+                {chat.title || "Conversation"}
+              </span>
+              <span className="text-[10px] text-slate-400 font-normal">
+                {formatRelativeDate(chat.updated_at || chat.created_at)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Action Controls Menu (Pin, Favorite, Rename, Delete) */}
+        {!isEditing && (
+          <div className="absolute right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 dark:bg-slate-800/95 p-1 rounded-lg shadow-xs">
+            {/* Pin Button */}
+            <button
+              onClick={(e) => handleTogglePin(e, chat)}
+              title={isPinned ? "Unpin Chat" : "Pin Chat"}
+              className={`p-1 transition ${isPinned ? "text-amber-600" : "text-slate-400 hover:text-amber-500"}`}
+            >
+              📌
+            </button>
+            {/* Favorite Button */}
+            <button
+              onClick={(e) => handleToggleFavorite(e, chat)}
+              title={isFavorite ? "Remove Favorite" : "Favorite Chat"}
+              className={`p-1 transition ${isFavorite ? "text-yellow-500" : "text-slate-400 hover:text-yellow-500"}`}
+            >
+              ⭐
+            </button>
+            {/* Rename Button */}
+            <button
+              onClick={(e) => handleStartRename(e, chat)}
+              title="Rename Conversation"
+              className="p-1 text-slate-400 hover:text-emerald-600 transition"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+              </svg>
+            </button>
+            {/* Delete Button */}
+            <button
+              onClick={(e) => handleDeleteChat(e, chat)}
+              title="Delete Conversation"
+              className="p-1 text-slate-400 hover:text-red-600 transition"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render Sidebar Content (Reused for desktop left panel and mobile drawer)
   const renderSidebarContent = () => (
     <div className="flex flex-col h-full bg-white p-4">
       {/* New Chat Button */}
       <button
         onClick={handleNewChat}
-        className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer mb-5"
+        className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer mb-3"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -373,90 +543,80 @@ export default function ChatbotPage() {
         + New Chat
       </button>
 
-      {/* Conversations Section Header */}
-      <div className="flex items-center justify-between px-2 mb-3">
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Chats</h3>
-        {loadingHistory && <Loader size="sm" color="emerald" />}
-      </div>
-
-      {/* Conversation List */}
-      <div className="flex-grow overflow-y-auto space-y-1.5 pr-1">
-        {historyList.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-xs">
-            No saved conversations yet. Start a new chat below!
-          </div>
-        ) : (
-          historyList.map((chat) => {
-            const isActive = conversationId === chat.id;
-            const isEditing = editingId === chat.id;
-
-            return (
-              <div
-                key={chat.id}
-                onClick={() => handleSelectChat(chat)}
-                className={`group relative flex items-center justify-between p-3 rounded-xl cursor-pointer text-sm transition duration-150 border ${
-                  isActive
-                    ? "bg-emerald-50 text-emerald-900 border-emerald-200 font-semibold"
-                    : "hover:bg-slate-50 text-slate-700 border-transparent hover:border-slate-200"
-                }`}
-              >
-                <div className="flex items-center gap-2.5 overflow-hidden w-full pr-16">
-                  <span className="text-base flex-shrink-0">💬</span>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onKeyDown={(e) => handleKeyDownRename(e, chat.id)}
-                      onBlur={() => handleSaveRename(chat.id)}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs bg-white text-slate-800 border border-emerald-400 rounded px-2 py-1 w-full focus:outline-none"
-                    />
-                  ) : (
-                    <div className="flex flex-col overflow-hidden">
-                      <span className="truncate text-xs font-medium text-slate-800 group-hover:text-emerald-700">
-                        {chat.title || "Conversation"}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-normal">
-                        {formatRelativeDate(chat.updated_at || chat.created_at)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions (Rename & Delete) */}
-                {!isEditing && (
-                  <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-800/90 p-1 rounded-lg">
-                    <button
-                      onClick={(e) => handleStartRename(e, chat)}
-                      title="Rename Conversation"
-                      className="p-1 text-slate-400 hover:text-emerald-600 transition"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteChat(e, chat)}
-                      title="Delete Conversation"
-                      className="p-1 text-slate-400 hover:text-red-600 transition"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })
+      {/* Instant Search Input Box */}
+      <div className="relative mb-3 flex-shrink-0">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+          🔍
+        </div>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search conversations..."
+          className="w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:bg-white transition text-slate-700 font-medium"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+          >
+            ✕
+          </button>
         )}
       </div>
 
-      {/* Bottom Common Farming Queries Sidebar Footer */}
-      <div className="mt-4 border-t border-slate-100 pt-4 flex-shrink-0">
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Suggestions</h3>
+      {/* Section Header */}
+      <div className="flex items-center justify-between px-1 mb-2">
+        <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Conversations</h3>
+        {loadingHistory && <Loader size="sm" color="emerald" />}
+      </div>
+
+      {/* Conversation List Container */}
+      <div className="flex-grow overflow-y-auto space-y-3 pr-1">
+        {filteredHistory.length === 0 ? (
+          <div className="text-center py-8 text-slate-400 text-xs">
+            {searchQuery ? "No conversations found" : "No saved conversations yet. Start a new chat!"}
+          </div>
+        ) : (
+          <>
+            {/* Pinned Conversations */}
+            {pinnedChats.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider px-1 mb-1 flex items-center gap-1">
+                  <span>📌</span> Pinned
+                </div>
+                {pinnedChats.map((chat) => renderChatItem(chat))}
+              </div>
+            )}
+
+            {/* Favorite Conversations */}
+            {favoriteChats.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold text-yellow-600 uppercase tracking-wider px-1 mb-1 flex items-center gap-1">
+                  <span>⭐</span> Favorites
+                </div>
+                {favoriteChats.map((chat) => renderChatItem(chat))}
+              </div>
+            )}
+
+            {/* Regular Conversations */}
+            {regularChats.length > 0 && (
+              <div className="space-y-1">
+                {(pinnedChats.length > 0 || favoriteChats.length > 0) && (
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 mb-1">
+                    Recent
+                  </div>
+                )}
+                {regularChats.map((chat) => renderChatItem(chat))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Bottom Quick Suggestions Footer */}
+      <div className="mt-4 border-t border-slate-100 pt-3 flex-shrink-0">
+        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Suggestions</h3>
         <div className="flex flex-wrap gap-1.5">
           {quickChips.slice(0, 3).map((chip, idx) => (
             <button
@@ -514,7 +674,7 @@ export default function ChatbotPage() {
               {/* Mobile Sidebar Toggle Button */}
               <button
                 onClick={() => setMobileSidebarOpen(true)}
-                className="md:hidden p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition"
+                className="md:hidden p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition cursor-pointer"
                 title="Toggle Sidebar"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
@@ -543,7 +703,7 @@ export default function ChatbotPage() {
             </div>
           </div>
 
-          {/* Quick Advice Chips Header inside Chat panel for quick access */}
+          {/* Quick Advice Chips Header inside Chat panel */}
           <div className="bg-slate-50/70 border-b border-slate-100 px-4 py-2 flex items-center gap-2 overflow-x-auto text-xs">
             <span className="text-slate-400 font-medium flex-shrink-0">Suggestions:</span>
             {quickChips.map((chip, idx) => (

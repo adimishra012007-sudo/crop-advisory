@@ -4,7 +4,9 @@ import {
   getChatHistory,
   getConversation,
   deleteConversation,
-  renameConversation
+  renameConversation,
+  togglePin,
+  toggleFavorite
 } from "../controllers/chatController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { dbCheck } from "../middleware/dbCheck.js";
@@ -31,5 +33,11 @@ router.delete("/history/:id", deleteConversation);
 
 // Rename conversation title by ID
 router.patch("/history/:id/title", renameConversation);
+
+// Toggle pin status by ID
+router.patch("/history/:id/pin", togglePin);
+
+// Toggle favorite status by ID
+router.patch("/history/:id/favorite", toggleFavorite);
 
 export default router;

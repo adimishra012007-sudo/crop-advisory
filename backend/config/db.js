@@ -80,14 +80,18 @@ const initializeDatabase = async () => {
         title VARCHAR(255) DEFAULT 'Conversation',
         session_name VARCHAR(255) DEFAULT 'Session',
         messages JSONB DEFAULT '[]'::jsonb,
+        is_pinned BOOLEAN DEFAULT FALSE,
+        is_favorite BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Migration helper: Ensure title column exists if table was previously created without it
+    // Migration helper: Ensure columns exist if table was previously created without them
     await pool.query(`
       ALTER TABLE chat_history ADD COLUMN IF NOT EXISTS title VARCHAR(255) DEFAULT 'Conversation';
+      ALTER TABLE chat_history ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
+      ALTER TABLE chat_history ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT FALSE;
     `);
 
     console.log("Database tables verified/created successfully.");

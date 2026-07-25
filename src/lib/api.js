@@ -285,3 +285,57 @@ export async function renameConversation(id, title) {
   return response.json();
 }
 
+/**
+ * Toggle pin status of a chat conversation by ID.
+ * @param {string|number} id - Conversation ID.
+ * @param {boolean} isPinned - Target pin status.
+ * @returns {Promise<Object>} Updated conversation object.
+ */
+export async function togglePinConversation(id, isPinned) {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/history/${id}/pin`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ isPinned })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to update pin state (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Toggle favorite status of a chat conversation by ID.
+ * @param {string|number} id - Conversation ID.
+ * @param {boolean} isFavorite - Target favorite status.
+ * @returns {Promise<Object>} Updated conversation object.
+ */
+export async function toggleFavoriteConversation(id, isFavorite) {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/history/${id}/favorite`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ isFavorite })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to update favorite state (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+

@@ -182,3 +182,75 @@ export const renameConversation = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Pin or unpin a chat conversation by ID
+ * @route   PATCH /api/chat/history/:id/pin
+ * @access  Private (JWT Protected)
+ */
+export const togglePin = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { isPinned, is_pinned } = req.body;
+
+    const targetPinnedState = isPinned !== undefined ? Boolean(isPinned) : (is_pinned !== undefined ? Boolean(is_pinned) : true);
+
+    const updated = await ChatHistoryModel.togglePin(id, userId, targetPinnedState);
+
+    if (!updated) {
+      return res.status(404).json({
+        error: "Not Found",
+        message: "Conversation not found or access denied."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Conversation ${targetPinnedState ? "pinned" : "unpinned"} successfully.`,
+      conversation: updated
+    });
+  } catch (error) {
+    console.error("Error toggling conversation pin state:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to update pin state."
+    });
+  }
+};
+
+/**
+ * @desc    Favorite or unfavorite a chat conversation by ID
+ * @route   PATCH /api/chat/history/:id/favorite
+ * @access  Private (JWT Protected)
+ */
+export const toggleFavorite = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { isFavorite, is_favorite } = req.body;
+
+    const targetFavoriteState = isFavorite !== undefined ? Boolean(isFavorite) : (is_favorite !== undefined ? Boolean(is_favorite) : true);
+
+    const updated = await ChatHistoryModel.toggleFavorite(id, userId, targetFavoriteState);
+
+    if (!updated) {
+      return res.status(404).json({
+        error: "Not Found",
+        message: "Conversation not found or access denied."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Conversation ${targetFavoriteState ? "marked as favorite" : "unfavorited"} successfully.`,
+      conversation: updated
+    });
+  } catch (error) {
+    console.error("Error toggling conversation favorite state:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to update favorite state."
+    });
+  }
+};
