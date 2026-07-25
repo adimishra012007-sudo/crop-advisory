@@ -171,3 +171,90 @@ export async function askAIChat(message) {
   return response.json();
 }
 
+/**
+ * Save or update AI chat conversation in PostgreSQL.
+ * @param {Object} chatData - Object containing title, messages array, and optional id.
+ * @returns {Promise<Object>} Saved conversation.
+ */
+export async function saveChat(chatData) {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/save`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(chatData)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to save conversation (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch all saved chat conversations for the logged in user.
+ * @returns {Promise<Array>} List of user conversations.
+ */
+export async function getChatHistory() {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/history`);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to fetch chat history (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch a single chat conversation by ID.
+ * @param {string|number} id - Conversation ID.
+ * @returns {Promise<Object>} Conversation detail.
+ */
+export async function getConversation(id) {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/history/${id}`);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to fetch conversation (Status: ${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Delete a single chat conversation by ID.
+ * @param {string|number} id - Conversation ID to delete.
+ * @returns {Promise<boolean>} True if deleted.
+ */
+export async function deleteConversation(id) {
+  const backendBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
+    : "http://localhost:5000";
+
+  const response = await request(`${backendBase}/api/chat/history/${id}`, {
+    method: "DELETE"
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to delete conversation (Status: ${response.status})`);
+  }
+
+  return true;
+}
+

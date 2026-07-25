@@ -4,10 +4,12 @@ import { useState } from "react";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { Toast, Loader } from "../../components/ui";
-import { searchCrop, askAIChat } from "../../lib/api";
+import { searchCrop, askAIChat, saveChat } from "../../lib/api";
 
 // Chatbot page showing the crop advisory conversation interface
 export default function ChatbotPage() {
+  const [conversationId, setConversationId] = useState(null);
+
   // Mock conversation state
   const [messages, setMessages] = useState([
     {
@@ -60,7 +62,8 @@ export default function ChatbotPage() {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessagesWithUser = [...messages, userMsg];
+    setMessages(updatedMessagesWithUser);
     setInputText("");
     setLoading(true);
 
@@ -70,24 +73,49 @@ export default function ChatbotPage() {
       const botText = data.response;
 
       const botMsg = {
-        id: messages.length + 2,
+        id: updatedMessagesWithUser.length + 1,
         sender: "bot",
         text: botText,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, botMsg]);
+
+      const fullMessages = [...updatedMessagesWithUser, botMsg];
+      setMessages(fullMessages);
+
+      // Silent Auto-Save to PostgreSQL for logged-in user after successful AI response
+      try {
+        const title = query.length > 30 ? `${query.substring(0, 30)}...` : query;
+        const formattedMessages = fullMessages.map((m) => ({
+          role: m.sender === "user" ? "user" : "assistant",
+          content: m.text,
+        }));
+
+        const saveRes = await saveChat({
+          id: conversationId,
+          title,
+          messages: formattedMessages,
+        });
+
+        if (saveRes && (saveRes.id || (saveRes.conversation && saveRes.conversation.id))) {
+          const savedId = saveRes.id || saveRes.conversation.id;
+          setConversationId(savedId);
+        }
+      } catch (autoSaveErr) {
+        // Handle 401, 404, 500, network error silently without popups or crashing UI
+        console.warn("Silent conversation auto-save skipped/failed:", autoSaveErr.message);
+      }
     } catch (err) {
       console.error(err);
       triggerToast(err.message || "Failed to contact the advisory API server.", "error");
       
       // Append fallback error bot message
       const errorMsg = {
-        id: messages.length + 2,
+        id: updatedMessagesWithUser.length + 1,
         sender: "bot",
         text: "Sorry, I am currently unable to retrieve advice from the AI Crop Advisor. Please check your connection and ensure the backend is running.",
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages([...updatedMessagesWithUser, errorMsg]);
     } finally {
       setLoading(false);
     }

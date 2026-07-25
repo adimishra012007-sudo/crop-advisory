@@ -76,12 +76,18 @@ const initializeDatabase = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS chat_history (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) DEFAULT 'Conversation',
         session_name VARCHAR(255) DEFAULT 'Session',
         messages JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Migration helper: Ensure title column exists if table was previously created without it
+    await pool.query(`
+      ALTER TABLE chat_history ADD COLUMN IF NOT EXISTS title VARCHAR(255) DEFAULT 'Conversation';
     `);
 
     console.log("Database tables verified/created successfully.");

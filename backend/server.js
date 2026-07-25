@@ -5,6 +5,7 @@ import connectDB from "./config/db.js";
 import cropRoutes from "./routes/cropRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 // Load environment variables
@@ -35,6 +36,9 @@ app.use("/api/users", userRoutes);
 
 // Register AI routes
 app.use("/api/ai", aiRoutes);
+
+// Register Chat routes
+app.use("/api/chat", chatRoutes);
 
 // Catch 404 and forward to error handler
 app.use(notFound);
