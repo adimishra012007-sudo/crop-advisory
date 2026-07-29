@@ -71,7 +71,8 @@ DATABASE_URL=postgresql://postgres:adimishra1405@db.aanrctgfdkycdonrgott.supabas
 
 ## Render Deployment Instructions
 
-To deploy this Express backend service to [Render](https://render.com/):
+- **Backend Production Base URL**: `https://crop-advisory-backend.onrender.com`
+- **Health Check Endpoint**: `https://crop-advisory-backend.onrender.com/api/health`
 
 ### 1. Render Service Configuration
 - **Environment**: Node
