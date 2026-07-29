@@ -17,8 +17,38 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS for all requests to support cross-origin API calls from the frontend
-app.use(cors());
+// Helper to extract base origin from URL
+const getClientOrigin = (urlStr) => {
+  if (!urlStr) return null;
+  try {
+    return new URL(urlStr).origin;
+  } catch {
+    return urlStr;
+  }
+};
+
+const clientRedirectOrigin = getClientOrigin(process.env.CLIENT_REDIRECT_URL);
+
+const allowedOrigins = new Set([
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  ...(clientRedirectOrigin ? [clientRedirectOrigin] : []),
+]);
+
+// Configure CORS for localhost development and future Vercel deployment
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server) or listed origins/Vercel deployments
+      if (!origin || allowedOrigins.has(origin) || origin.endsWith(".vercel.app")) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+    credentials: true,
+  })
+);
 
 // Parse incoming requests with JSON payloads
 app.use(express.json());

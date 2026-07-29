@@ -243,9 +243,6 @@ export const userController = {
           location: { district: "", state: "Uttarakhand" },
           phone: ""
         });
-        console.log(`Created new Google user: ${email}`);
-      } else {
-        console.log(`LoggedIn existing Google user: ${email}`);
       }
 
       // Generate JWT

@@ -6,6 +6,7 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { Button, Toast, Loader } from "../../components/ui";
 import { logout, getToken, getUser, isAuthenticated } from "../../lib/auth";
+import { getUserProfile } from "../../lib/api";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -22,19 +23,7 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const token = getToken();
-        const response = await fetch("http://localhost:5000/api/users/profile", {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error("Session expired or invalid.");
-        }
-
-        const data = await response.json();
+        const data = await getUserProfile();
         setUser(data);
       } catch (err) {
         console.error("Failed to fetch backend profile, falling back to local storage:", err);

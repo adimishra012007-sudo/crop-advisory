@@ -7,6 +7,7 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { Button, Input, Toast, Loader } from "../../components/ui";
 import { login, isAuthenticated } from "../../lib/auth";
+import { getApiBaseUrl } from "../../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function LoginPage() {
       
       const fetchGoogleProfile = async () => {
         try {
-          const response = await fetch("http://localhost:5000/api/users/profile", {
+          const response = await fetch(`${getApiBaseUrl()}/api/users/profile`, {
             method: "GET",
             headers: {
               "Authorization": `Bearer ${tokenParam}`
@@ -201,7 +202,7 @@ export default function LoginPage() {
             variant="secondary"
             size="md"
             onClick={() => {
-              window.location.href = "http://localhost:5000/api/users/google";
+              window.location.href = `${getApiBaseUrl()}/api/users/google`;
             }}
             className="w-full flex justify-center items-center gap-2 border border-slate-200/80 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer text-sm font-semibold shadow-xs"
           >

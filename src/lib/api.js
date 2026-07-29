@@ -3,7 +3,30 @@
 
 import { getToken, logout } from "./auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/crops";
+/**
+ * Resolves base backend server URL from environment variables.
+ * Handles cases where NEXT_PUBLIC_API_URL includes or excludes subpaths.
+ */
+export const getApiBaseUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!envUrl) return "http://localhost:5000";
+  return envUrl.replace(/\/api\/crops\/?$/, "").replace(/\/$/, "");
+};
+
+export const getCropsApiBase = () => `${getApiBaseUrl()}/api/crops`;
+
+/**
+ * Fetch details for logged-in user profile.
+ * @returns {Promise<Object>} User profile object.
+ */
+export async function getUserProfile() {
+  const response = await request(`${getApiBaseUrl()}/api/users/profile`);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to fetch profile (Status: ${response.status})`);
+  }
+  return response.json();
+}
 
 /**
  * Helper to perform fetch requests with automatic JWT attachment and 401 verification.
@@ -42,7 +65,7 @@ async function request(url, options = {}) {
  * @returns {Promise<Array>} Promise resolving to the list of crops.
  */
 export async function getAllCrops() {
-  const response = await request(API_BASE);
+  const response = await request(getCropsApiBase());
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `Failed to fetch crops (Status: ${response.status})`);
@@ -56,7 +79,7 @@ export async function getAllCrops() {
  * @returns {Promise<Object>} Promise resolving to the crop record.
  */
 export async function getCrop(id) {
-  const response = await request(`${API_BASE}/${id}`);
+  const response = await request(`${getCropsApiBase()}/${id}`);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `Failed to fetch crop details (Status: ${response.status})`);
@@ -70,7 +93,7 @@ export async function getCrop(id) {
  * @returns {Promise<Object>} Promise resolving to the created crop record.
  */
 export async function createCrop(cropData) {
-  const response = await request(API_BASE, {
+  const response = await request(getCropsApiBase(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -94,7 +117,7 @@ export async function createCrop(cropData) {
  * @returns {Promise<Object>} Promise resolving to the updated crop record.
  */
 export async function updateCrop(id, cropData) {
-  const response = await request(`${API_BASE}/${id}`, {
+  const response = await request(`${getCropsApiBase()}/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json"
@@ -117,7 +140,7 @@ export async function updateCrop(id, cropData) {
  * @returns {Promise<boolean>} Promise resolving to true if deleted successfully.
  */
 export async function deleteCrop(id) {
-  const response = await request(`${API_BASE}/${id}`, {
+  const response = await request(`${getCropsApiBase()}/${id}`, {
     method: "DELETE"
   });
 
@@ -136,7 +159,7 @@ export async function deleteCrop(id) {
  * @returns {Promise<Array>} Promise resolving to matching crop records.
  */
 export async function searchCrop(query) {
-  const response = await request(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+  const response = await request(`${getCropsApiBase()}/search?q=${encodeURIComponent(query)}`);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `Failed to search crops (Status: ${response.status})`);
@@ -151,12 +174,7 @@ export async function searchCrop(query) {
  * @returns {Promise<Object>} The AI response container.
  */
 export async function askAIChat(message) {
-  // Extract base backend url by replacing '/api/crops'
-  const backendBase = process.env.NEXT_PUBLIC_API_URL 
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "") 
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/ai/chat`, {
+  const response = await request(`${getApiBaseUrl()}/api/ai/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -177,11 +195,7 @@ export async function askAIChat(message) {
  * @returns {Promise<Object>} Saved conversation.
  */
 export async function saveChat(chatData) {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/save`, {
+  const response = await request(`${getApiBaseUrl()}/api/chat/save`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -202,11 +216,7 @@ export async function saveChat(chatData) {
  * @returns {Promise<Array>} List of user conversations.
  */
 export async function getChatHistory() {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/history`);
+  const response = await request(`${getApiBaseUrl()}/api/chat/history`);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -222,11 +232,7 @@ export async function getChatHistory() {
  * @returns {Promise<Object>} Conversation detail.
  */
 export async function getConversation(id) {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/history/${id}`);
+  const response = await request(`${getApiBaseUrl()}/api/chat/history/${id}`);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -242,11 +248,7 @@ export async function getConversation(id) {
  * @returns {Promise<boolean>} True if deleted.
  */
 export async function deleteConversation(id) {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/history/${id}`, {
+  const response = await request(`${getApiBaseUrl()}/api/chat/history/${id}`, {
     method: "DELETE"
   });
 
@@ -265,11 +267,7 @@ export async function deleteConversation(id) {
  * @returns {Promise<Object>} Updated conversation object.
  */
 export async function renameConversation(id, title) {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/history/${id}/title`, {
+  const response = await request(`${getApiBaseUrl()}/api/chat/history/${id}/title`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json"
@@ -292,11 +290,7 @@ export async function renameConversation(id, title) {
  * @returns {Promise<Object>} Updated conversation object.
  */
 export async function togglePinConversation(id, isPinned) {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/history/${id}/pin`, {
+  const response = await request(`${getApiBaseUrl()}/api/chat/history/${id}/pin`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json"
@@ -319,11 +313,7 @@ export async function togglePinConversation(id, isPinned) {
  * @returns {Promise<Object>} Updated conversation object.
  */
 export async function toggleFavoriteConversation(id, isFavorite) {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/history/${id}/favorite`, {
+  const response = await request(`${getApiBaseUrl()}/api/chat/history/${id}/favorite`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json"
@@ -345,11 +335,7 @@ export async function toggleFavoriteConversation(id, isFavorite) {
  * @returns {Promise<Object>} Exported JSON payload.
  */
 export async function exportConversation(id) {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/history/${id}/export`);
+  const response = await request(`${getApiBaseUrl()}/api/chat/history/${id}/export`);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -365,11 +351,7 @@ export async function exportConversation(id) {
  * @returns {Promise<Object>} Created conversation object.
  */
 export async function importConversation(conversationData) {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/import`, {
+  const response = await request(`${getApiBaseUrl()}/api/chat/import`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -390,11 +372,7 @@ export async function importConversation(conversationData) {
  * @returns {Promise<Object>} Analytics metrics object.
  */
 export async function getChatAnalytics() {
-  const backendBase = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace("/api/crops", "")
-    : "http://localhost:5000";
-
-  const response = await request(`${backendBase}/api/chat/analytics`);
+  const response = await request(`${getApiBaseUrl()}/api/chat/analytics`);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

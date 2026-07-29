@@ -19,7 +19,7 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { Button, Toast, Loader } from "../../components/ui";
 import { logout, getToken, getUser, isAuthenticated } from "../../lib/auth";
-import { getChatAnalytics } from "../../lib/api";
+import { getChatAnalytics, getApiBaseUrl, getCropsApiBase } from "../../lib/api";
 
 // Dynamically import heavy Chart.js components for client-side rendering
 const Doughnut = dynamic(() => import("react-chartjs-2").then((mod) => mod.Doughnut), { ssr: false });
@@ -71,7 +71,7 @@ export default function DashboardPage() {
         const token = getToken();
 
         // 1. Fetch user profile from backend
-        const profileResponse = await fetch("http://localhost:5000/api/users/profile", {
+        const profileResponse = await fetch(`${getApiBaseUrl()}/api/users/profile`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -95,7 +95,7 @@ export default function DashboardPage() {
         setUser(userData);
 
         // 2. Fetch crops count from backend
-        const cropsResponse = await fetch("http://localhost:5000/api/crops", {
+        const cropsResponse = await fetch(getCropsApiBase(), {
           headers: {
             Authorization: `Bearer ${token}`,
           },

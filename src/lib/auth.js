@@ -1,6 +1,11 @@
-// Client-side authentication service using localStorage and custom event triggering.
+// Helper to get base API URL from environment variables
+const getApiBaseUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!envUrl) return "http://localhost:5000";
+  return envUrl.replace(/\/api\/crops\/?$/, "").replace(/\/$/, "");
+};
 
-const AUTH_API_BASE = "http://localhost:5000/api/users";
+const getAuthApiBase = () => `${getApiBaseUrl()}/api/users`;
 
 /**
  * Perform login request to the backend.
@@ -11,7 +16,7 @@ const AUTH_API_BASE = "http://localhost:5000/api/users";
 export async function login(email, password) {
   let response;
   try {
-    response = await fetch(`${AUTH_API_BASE}/login`, {
+    response = await fetch(`${getAuthApiBase()}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -57,7 +62,7 @@ export async function login(email, password) {
 export async function signup(userData) {
   let response;
   try {
-    response = await fetch(`${AUTH_API_BASE}/signup`, {
+    response = await fetch(`${getAuthApiBase()}/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
