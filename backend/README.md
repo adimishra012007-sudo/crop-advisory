@@ -69,6 +69,33 @@ DATABASE_URL=postgresql://postgres:adimishra1405@db.aanrctgfdkycdonrgott.supabas
 
 ---
 
+## Render Deployment Instructions
+
+To deploy this Express backend service to [Render](https://render.com/):
+
+### 1. Render Service Configuration
+- **Environment**: Node
+- **Root Directory**: `backend`
+- **Build Command**: `npm install`
+- **Start Command**: `npm start`
+
+### 2. Required Environment Variables on Render
+Add these key-value pairs under **Environment** settings in Render:
+
+- `PORT`: Assigned dynamically by Render (or `5000`)
+- `DATABASE_URL`: `postgresql://postgres:<password>@db.<ref>.supabase.co:6543/postgres`
+- `JWT_SECRET`: Secret key for JWT verification
+- `GOOGLE_CLIENT_ID`: Google OAuth Client ID
+- `GOOGLE_CLIENT_SECRET`: Google OAuth Client Secret
+- `GOOGLE_CALLBACK_URL`: `https://<render-backend-app>.onrender.com/api/users/google/callback`
+- `CLIENT_REDIRECT_URL`: `https://<vercel-frontend-app>.vercel.app/login`
+- `GEMINI_API_KEY`: Google Gemini API Key
+
+### 3. Health Check Configuration
+- **Health Check Path**: `/api/health`
+
+---
+
 ## Database Schemas
 
 The application defines three tables designed for the AI Crop Advisory system:

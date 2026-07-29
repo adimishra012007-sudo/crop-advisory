@@ -7,11 +7,16 @@ export const notFound = (req, res, next) => {
 
 // Global Error Handler Middleware for formatting and returning JSON errors
 export const errorHandler = (err, req, res, next) => {
-  // If the status code is still 200, default to 500
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  const statusCode = err.statusCode || (res.statusCode === 200 ? 500 : res.statusCode);
   
+  // Log server errors for operational visibility
+  if (statusCode >= 500) {
+    console.error(`[Server Error ${statusCode}]:`, err.message || err);
+  }
+
   res.status(statusCode).json({
     error: err.name || "Internal Server Error",
     message: err.message || "An unexpected error occurred on the server.",
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };

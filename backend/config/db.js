@@ -32,7 +32,8 @@ const connectDB = async () => {
     await initializeDatabase();
   } catch (error) {
     isDbConnected = false;
-    console.error(`PostgreSQL connection failure: ${error.message}`);
+    const sanitizedMsg = String(error.message || "").replace(/:\/\/[^:]+:[^@]+@/, "://***:***@");
+    console.error(`PostgreSQL connection failure: ${sanitizedMsg}`);
     console.warn("The server will continue to run, but database operations will fail until a valid connection is established.");
   }
 };

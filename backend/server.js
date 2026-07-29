@@ -55,7 +55,7 @@ app.use(express.json());
 
 // Base diagnostic endpoint
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "healthy", timestamp: new Date() });
+  res.status(200).json({ status: "healthy" });
 });
 
 // Register Crop REST routes
@@ -76,7 +76,17 @@ app.use(notFound);
 // Custom error handling middleware
 app.use(errorHandler);
 
+// Global safety process handlers for production resilience
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  process.exit(1);
+});
+
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server is running in ${process.env.NODE_ENV || "development"} mode on http://localhost:${PORT}`);
+  console.log(`Server is running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`);
 });
