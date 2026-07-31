@@ -1,12 +1,20 @@
 # AI-Powered Crop Advisory System for Uttarakhand Farmers
 
-An AI-Powered Crop Advisory platform tailored for mountain agriculture and farmers in Uttarakhand. The application features a Next.js (App Router) frontend and an Express.js Node.js backend connected to a Supabase PostgreSQL database and the Google Gemini AI API.
+An AI-Powered Crop Advisory platform tailored for mountain agriculture and farmers in Uttarakhand. The application features a Next.js (App Router) frontend deployed on **Vercel** and an Express.js Node.js backend deployed on **Render**, connected to a Supabase PostgreSQL database and Google Gemini AI API.
 
 **Project TBI ID**: 26100438
 
 ---
 
-## 🌟 Key Features (Weeks 1–8)
+## 🌐 Production Deployment Links
+
+- **Frontend (Vercel)**: [https://crop-advisory-tau.vercel.app](https://crop-advisory-tau.vercel.app)
+- **Backend API (Render)**: [https://crop-advisory-p0ng.onrender.com](https://crop-advisory-p0ng.onrender.com)
+- **API Health Check**: [https://crop-advisory-p0ng.onrender.com/api/health](https://crop-advisory-p0ng.onrender.com/api/health)
+
+---
+
+## 🌟 Key Features
 
 1. **Authentication & Authorization**
    - JWT-based authentication for registration, login, and protected routes.
@@ -36,6 +44,31 @@ An AI-Powered Crop Advisory platform tailored for mountain agriculture and farme
 5. **Conversation Analytics Dashboard**
    - Aggregate statistics: Total Conversations, Total Messages, Favorites, Pinned Chats, Average Messages, Longest Chat, Oldest/Latest Activity Dates.
    - Interactive Chart.js visual charts (`Doughnut`, `Bar`, `Line`) dynamically imported for optimal bundle performance.
+
+6. **Responsive & Accessible UI**
+   - Dark and Light mode toggle with local storage persistence.
+   - Tailored UI aesthetics with glassmorphism effects, custom color system, and mobile drawer navigation.
+
+---
+
+## 🛠️ Technologies Used
+
+### Frontend Stack
+- **Framework**: Next.js 16 (App Router with Turbopack)
+- **Library**: React 19
+- **Styling**: Tailwind CSS, Vanilla CSS design tokens
+- **Data Visualization**: Chart.js & `react-chartjs-2`
+- **Icons & Markdown**: Lucide React, `react-markdown`, `remark-gfm`
+- **Hosting**: Vercel
+
+### Backend Stack
+- **Runtime**: Node.js (v18+)
+- **Framework**: Express.js
+- **Database**: PostgreSQL hosted on Supabase (`pg` connection pooler)
+- **AI Integration**: Google Generative AI SDK (`@google/generative-ai`)
+- **Authentication**: JSON Web Tokens (`jsonwebtoken`), `bcryptjs`
+- **OAuth**: Google OAuth 2.0 REST Flow
+- **Hosting**: Render Web Services
 
 ---
 
@@ -78,8 +111,8 @@ crop-advisory/
 │       ├── api.js            # Client-side API fetch client
 │       └── auth.js           # Local authentication token state helper
 │
+├── .env.example              # Frontend Environment variables template
 ├── package.json              # Frontend dependencies config
-├── PROMPTS.md                # Prompt Engineering documentation
 ├── walkthrough.md            # System Architecture & Technical Walkthrough
 └── README.md                 # Complete documentation guide
 ```
@@ -88,7 +121,12 @@ crop-advisory/
 
 ## 🚀 REST API Endpoint Specification
 
-### 1. User & Auth Routes (`/api/users`)
+### 1. Diagnostic Health Route
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/api/health` | Public | Backend health check (Returns `{"status": "healthy"}`) |
+
+### 2. User & Auth Routes (`/api/users`)
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | `POST` | `/api/users/signup` | Public | Register a new user |
@@ -97,7 +135,7 @@ crop-advisory/
 | `GET` | `/api/users/google` | Public | Initiates Google OAuth 2.0 flow |
 | `GET` | `/api/users/google/callback` | Public | Google OAuth redirect handler |
 
-### 2. Crop Routes (`/api/crops`)
+### 3. Crop Routes (`/api/crops`)
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | `GET` | `/api/crops` | Public | List all crop records |
@@ -107,12 +145,12 @@ crop-advisory/
 | `PUT` | `/api/crops/:id` | Protected | Update existing crop record |
 | `DELETE` | `/api/crops/:id` | Protected | Delete crop record |
 
-### 3. AI Routes (`/api/ai`)
+### 4. AI Routes (`/api/ai`)
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | `POST` | `/api/ai/chat` | Protected | Query Google Gemini 3.1 Flash for crop advice |
 
-### 4. Chat History & Analytics Routes (`/api/chat`)
+### 5. Chat History & Analytics Routes (`/api/chat`)
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | `GET` | `/api/chat/history` | Protected | Fetch all user conversations ordered newest first |
@@ -128,114 +166,72 @@ crop-advisory/
 
 ---
 
-## 🛢️ Database Schema (PostgreSQL)
+## 🔑 Environment Variables Configuration
 
-### `users`
-```sql
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  role VARCHAR(50) DEFAULT 'farmer',
-  location JSONB DEFAULT '{"district": "", "state": "Uttarakhand"}'::jsonb,
-  phone VARCHAR(50) DEFAULT '',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### `crops`
-```sql
-CREATE TABLE IF NOT EXISTS crops (
-  id SERIAL PRIMARY KEY,
-  crop_name VARCHAR(255) NOT NULL,
-  soil_type VARCHAR(255) NOT NULL,
-  season VARCHAR(255) NOT NULL,
-  water_requirement VARCHAR(255) DEFAULT 'Not specified',
-  fertilizer VARCHAR(255) DEFAULT 'Not specified',
-  description TEXT DEFAULT '',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### `chat_history`
-```sql
-CREATE TABLE IF NOT EXISTS chat_history (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  title VARCHAR(255) DEFAULT 'Conversation',
-  session_name VARCHAR(255) DEFAULT 'Session',
-  messages JSONB DEFAULT '[]'::jsonb,
-  is_pinned BOOLEAN DEFAULT FALSE,
-  is_favorite BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-```
-
----
-
-## 💻 Setup & Local Development Guide
-
-### 1. Environment Configuration
-
-#### Backend `.env` (Location: `backend/.env`)
+### Backend Environment Variables (`backend/.env`)
 ```env
 PORT=5000
-DATABASE_URL=postgresql://postgres:password@localhost:5432/postgres
+DATABASE_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:6543/postgres
 JWT_SECRET=your_jwt_secret_key
-GEMINI_API_KEY=your_google_gemini_api_key
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:5000/api/users/google/callback
-CLIENT_REDIRECT_URL=http://localhost:3000/login
+GOOGLE_CALLBACK_URL=https://crop-advisory-p0ng.onrender.com/api/users/google/callback
+CLIENT_REDIRECT_URL=https://crop-advisory-tau.vercel.app/login
+GEMINI_API_KEY=your_google_gemini_api_key
 ```
 
-#### Frontend `.env.local` (Location: `crop-advisory/.env.local`)
+### Frontend Environment Variables (`.env.local` / Vercel)
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api/crops
+NEXT_PUBLIC_API_URL=https://crop-advisory-p0ng.onrender.com
 ```
 
 ---
 
-### 2. Running the Server
+## 💻 Installation & Setup Guide
 
-#### Backend Express API Server
+### 1. Backend Server Setup
 ```bash
 cd backend
 npm install
 npm run dev
 ```
 
-#### Frontend Next.js Application
+### 2. Frontend Next.js App Setup
 ```bash
 cd crop-advisory
 npm install
 npm run dev
 ```
 
-Visit the application in your browser at `http://localhost:3000`.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🛠️ Production Build & Verification
+## 📸 Screenshots
 
-To verify production compilation, run:
-```bash
-npm run build
-```
+*(Place screenshots of the application below)*
 
-This compiles Next.js App Router pages, generates static assets, and verifies TypeScript/ESLint validity.
+- **Landing Page**: `![Landing Page](public/screenshots/landing.png)`
+- **AI Chatbot Interface**: `![AI Chatbot Interface](public/screenshots/chatbot.png)`
+- **Crop Registry Dashboard**: `![Crop Registry Dashboard](public/screenshots/crops.png)`
+- **Analytics Dashboard**: `![Analytics Dashboard](public/screenshots/analytics.png)`
 
 ---
 
 ## 🔍 Troubleshooting Guide
 
-1. **PostgreSQL Database Connection Failure**:
-   - Verify `DATABASE_URL` credentials and ensure SSL settings (`rejectUnauthorized: false` for Supabase) are active.
-2. **Gemini API Error (403/429/500)**:
-   - Ensure a valid `GEMINI_API_KEY` is provided in `backend/.env`.
-3. **Authentication 401 Expiration**:
-   - JWT tokens automatically trigger token refresh / redirection to `/login` when expired.
+1. **PostgreSQL Connection Failures**:
+   - Ensure your Supabase connection URI uses port `6543` to leverage connection pooling.
+2. **Google OAuth `redirect_uri_mismatch` Error**:
+   - Verify `GOOGLE_CALLBACK_URL` on Render matches the Authorized redirect URI in Google Cloud Console: `https://crop-advisory-p0ng.onrender.com/api/users/google/callback`.
+3. **Gemini API Error (429 / 400)**:
+   - Verify `GEMINI_API_KEY` is defined in backend environment variables.
+
+---
+
+## 🔮 Future Improvements
+
+- Multilingual support for Hindi and regional Kumaoni / Garhwali dialects.
+- Image recognition module for automatic leaf disease diagnosis.
+- Real-time mandi crop price indicators via Govt. Agri API integration.
+- Offline-first Progressive Web App (PWA) capabilities for rural farmers.
