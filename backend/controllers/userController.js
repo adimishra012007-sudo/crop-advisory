@@ -11,6 +11,37 @@ const generateToken = (id) => {
   });
 };
 
+/**
+ * Helper to dynamically determine the exact Google OAuth callback URL.
+ * Prefers process.env.GOOGLE_CALLBACK_URL, with fallback to current request protocol and host.
+ */
+const getGoogleCallbackUrl = (req) => {
+  if (process.env.GOOGLE_CALLBACK_URL && process.env.GOOGLE_CALLBACK_URL.trim() !== "") {
+    return process.env.GOOGLE_CALLBACK_URL.trim();
+  }
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+  const host = req.get("host") || "localhost:5000";
+  return `${protocol}://${host}/api/users/google/callback`;
+};
+
+/**
+ * Helper to dynamically determine the frontend redirect URL after OAuth.
+ * Prefers process.env.CLIENT_REDIRECT_URL, with fallback to request origin or production Vercel URL.
+ */
+const getClientRedirectUrl = (req) => {
+  if (process.env.CLIENT_REDIRECT_URL && process.env.CLIENT_REDIRECT_URL.trim() !== "") {
+    return process.env.CLIENT_REDIRECT_URL.trim();
+  }
+  const origin = req.get("origin") || req.get("referer");
+  if (origin) {
+    try {
+      const parsed = new URL(origin);
+      return `${parsed.origin}/login`;
+    } catch {}
+  }
+  return "https://crop-advisory-tau.vercel.app/login";
+};
+
 export const userController = {
   // POST /api/users/signup
   registerUser: async (req, res, next) => {
@@ -145,15 +176,15 @@ export const userController = {
   // GET /api/users/google
   googleAuth: (req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/users/google/callback";
+    const callbackUrl = getGoogleCallbackUrl(req);
     
     if (!clientId) {
-      console.error("GOOGLE_CLIENT_ID is not configured in .env");
-      return res.status(500).send("Google OAuth is not configured on this server. Please set GOOGLE_CLIENT_ID in your backend .env file.");
+      console.error("GOOGLE_CLIENT_ID is not configured in environment variables.");
+      return res.status(500).send("Google OAuth is not configured on this server. Please set GOOGLE_CLIENT_ID in environment variables.");
     }
 
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${clientId}` +
+      `client_id=${encodeURIComponent(clientId)}` +
       `&redirect_uri=${encodeURIComponent(callbackUrl)}` +
       `&response_type=code` +
       `&scope=${encodeURIComponent("profile email")}` +
@@ -164,21 +195,26 @@ export const userController = {
 
   // GET /api/users/google/callback
   googleCallback: async (req, res, next) => {
+    const redirectUrl = getClientRedirectUrl(req);
+    const appendParam = (url, key, val) => {
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}${key}=${encodeURIComponent(val)}`;
+    };
+
     try {
       const { code } = req.query;
-      const redirectUrl = process.env.CLIENT_REDIRECT_URL || "http://localhost:3000/login";
       
       if (!code) {
-        return res.redirect(`${redirectUrl}?error=cancelled`);
+        return res.redirect(appendParam(redirectUrl, "error", "cancelled"));
       }
 
       const clientId = process.env.GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-      const callbackUrl = process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/users/google/callback";
+      const callbackUrl = getGoogleCallbackUrl(req);
 
       if (!clientId || !clientSecret) {
-        console.error("Google OAuth credentials are not fully configured in .env");
-        return res.redirect(`${redirectUrl}?error=oauth_config_missing`);
+        console.error("Google OAuth credentials are not fully configured in environment variables.");
+        return res.redirect(appendParam(redirectUrl, "error", "oauth_config_missing"));
       }
 
       // Exchange code for tokens
@@ -188,7 +224,7 @@ export const userController = {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          code,
+          code: String(code),
           client_id: clientId,
           client_secret: clientSecret,
           redirect_uri: callbackUrl,
@@ -199,7 +235,7 @@ export const userController = {
       if (!tokenResponse.ok) {
         const errText = await tokenResponse.text();
         console.error("Google Token Exchange failed:", errText);
-        return res.redirect(`${redirectUrl}?error=token_exchange_failed`);
+        return res.redirect(appendParam(redirectUrl, "error", "token_exchange_failed"));
       }
 
       const tokenData = await tokenResponse.json();
@@ -215,7 +251,7 @@ export const userController = {
       if (!profileResponse.ok) {
         const errText = await profileResponse.text();
         console.error("Google Profile fetch failed:", errText);
-        return res.redirect(`${redirectUrl}?error=profile_fetch_failed`);
+        return res.redirect(appendParam(redirectUrl, "error", "profile_fetch_failed"));
       }
 
       const profile = await profileResponse.json();
@@ -223,7 +259,7 @@ export const userController = {
       const name = profile.name || email.split("@")[0];
 
       if (!email) {
-        return res.redirect(`${redirectUrl}?error=email_not_provided`);
+        return res.redirect(appendParam(redirectUrl, "error", "email_not_provided"));
       }
 
       // Find or create user
@@ -249,11 +285,10 @@ export const userController = {
       const token = generateToken(user.id);
 
       // Return the token safely via redirection query param
-      return res.redirect(`${redirectUrl}?token=${token}`);
+      return res.redirect(appendParam(redirectUrl, "token", token));
     } catch (error) {
       console.error("Google OAuth error:", error);
-      const redirectUrl = process.env.CLIENT_REDIRECT_URL || "http://localhost:3000/login";
-      return res.redirect(`${redirectUrl}?error=server_error`);
+      return res.redirect(appendParam(redirectUrl, "error", "server_error"));
     }
   }
 };

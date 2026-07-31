@@ -17,6 +17,9 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust reverse proxy headers (required on Render, Heroku, Cloudflare for proper protocol/host detection)
+app.set("trust proxy", 1);
+
 // Helper to extract base origin from URL
 const getClientOrigin = (urlStr) => {
   if (!urlStr) return null;
@@ -32,6 +35,7 @@ const clientRedirectOrigin = getClientOrigin(process.env.CLIENT_REDIRECT_URL);
 const allowedOrigins = new Set([
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "https://crop-advisory-tau.vercel.app",
   ...(clientRedirectOrigin ? [clientRedirectOrigin] : []),
 ]);
 
