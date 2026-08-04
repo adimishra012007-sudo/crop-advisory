@@ -30,15 +30,15 @@ export default function Features() {
   ];
 
   return (
-    <section className="py-20 bg-slate-50/50">
+    <section className="py-20 bg-slate-50/50 dark:bg-slate-950/80 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
             Tailored Solutions for{" "}
-            <span className="text-emerald-600">Mountain Farming</span>
+            <span className="text-emerald-600 dark:text-emerald-400">Mountain Farming</span>
           </h2>
-          <p className="mt-4 text-slate-600 text-lg">
+          <p className="mt-4 text-slate-600 dark:text-slate-300 text-lg">
             Interact with our AI chatbot to receive customized solutions for the unique challenges of Uttarakhand's agricultural ecosystems.
           </p>
         </div>

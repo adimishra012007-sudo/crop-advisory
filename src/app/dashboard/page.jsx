@@ -19,7 +19,7 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { Button, Toast, Loader } from "../../components/ui";
 import { logout, getToken, getUser, isAuthenticated } from "../../lib/auth";
-import { getChatAnalytics, getApiBaseUrl, getCropsApiBase } from "../../lib/api";
+import { getChatAnalytics, getApiBaseUrl } from "../../lib/api";
 
 // Dynamically import heavy Chart.js components for client-side rendering
 const Doughnut = dynamic(() => import("react-chartjs-2").then((mod) => mod.Doughnut), { ssr: false });
@@ -50,7 +50,6 @@ function formatDate(dateStr) {
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [cropsCount, setCropsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
@@ -93,17 +92,6 @@ export default function DashboardPage() {
 
         const userData = await profileResponse.json();
         setUser(userData);
-
-        // 2. Fetch crops count from backend
-        const cropsResponse = await fetch(getCropsApiBase(), {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (cropsResponse.ok) {
-          const cropsData = await cropsResponse.json();
-          setCropsCount(cropsData.length);
-        }
       } catch (err) {
         console.error("Dashboard data load failed:", err);
         const localUser = getUser();

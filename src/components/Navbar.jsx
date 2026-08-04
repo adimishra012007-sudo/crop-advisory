@@ -38,14 +38,14 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-emerald-100 shadow-sm">
+    <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/90 backdrop-blur-md border-b border-emerald-100 dark:border-emerald-950/40 shadow-sm transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Logo Section */}
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <span className="text-2xl">🌱</span>
-              <span className="font-extrabold text-xl bg-gradient-to-r from-emerald-600 to-green-700 bg-clip-text text-transparent tracking-tight">
+              <span className="font-extrabold text-xl bg-gradient-to-r from-emerald-600 to-green-700 dark:from-emerald-400 dark:to-green-500 bg-clip-text text-transparent tracking-tight">
                 AI Crop Advisory
               </span>
             </Link>
@@ -59,10 +59,10 @@ export default function Navbar() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-sm font-semibold transition-all duration-250 hover:text-emerald-600 px-3 py-2 rounded-md ${
+                  className={`text-sm font-semibold transition-all duration-250 hover:text-emerald-600 dark:hover:text-emerald-400 px-3 py-2 rounded-md ${
                     isActive
-                      ? "text-emerald-700 bg-emerald-50"
-                      : "text-slate-600"
+                      ? "text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/50"
+                      : "text-slate-600 dark:text-slate-300"
                   }`}
                 >
                   {link.name}
@@ -76,7 +76,7 @@ export default function Navbar() {
             <ThemeToggle />
             <Link
               href={isLoggedIn ? "/profile" : "/login"}
-              className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 p-2 rounded-full transition-colors duration-200 border border-emerald-200"
+              className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-900/60 p-2 rounded-full transition-colors duration-200 border border-emerald-200 dark:border-emerald-800"
               title={isLoggedIn ? `Profile: ${user?.name}` : "Log In"}
             >
               {/* Simple Profile Avatar SVG */}
@@ -101,7 +101,7 @@ export default function Navbar() {
                   logout();
                   window.location.href = "/";
                 }}
-                className="text-xs font-bold text-slate-500 hover:text-rose-600 dark:text-slate-450 dark:hover:text-rose-450 transition-colors px-2.5 py-1.5 border border-slate-200/80 dark:border-slate-800 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-850 cursor-pointer"
+                className="text-xs font-bold text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-colors px-2.5 py-1.5 border border-slate-200/80 dark:border-slate-800 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 cursor-pointer"
               >
                 Logout
               </button>
@@ -113,8 +113,8 @@ export default function Navbar() {
             <ThemeToggle />
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 focus:outline-none transition"
-              aria-expanded="false"
+              className="inline-flex items-center justify-center p-2 rounded-md text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-slate-800 focus:outline-none transition"
+              aria-expanded={isOpen}
             >
               <span className="sr-only">Open main menu</span>
               {isOpen ? (
@@ -155,7 +155,7 @@ export default function Navbar() {
 
       {/* Mobile Drawer menu, show/hide based on menu state */}
       {isOpen && (
-        <div className="md:hidden bg-white border-b border-emerald-100 animate-fadeIn">
+        <div className="md:hidden bg-white dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-900/40 animate-fadeIn">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -166,8 +166,8 @@ export default function Navbar() {
                   onClick={() => setIsOpen(false)}
                   className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
                     isActive
-                      ? "text-emerald-700 bg-emerald-50 font-bold"
-                      : "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/50"
+                      ? "text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/60 font-bold"
+                      : "text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-slate-800"
                   }`}
                 >
                   {link.name}
@@ -178,9 +178,9 @@ export default function Navbar() {
             <Link
               href={isLoggedIn ? "/profile" : "/login"}
               onClick={() => setIsOpen(false)}
-              className="border-t border-emerald-100 pt-4 pb-2 px-3 flex items-center space-x-3 hover:bg-emerald-50/50 transition-colors rounded-md"
+              className="border-t border-emerald-100 dark:border-slate-800 pt-4 pb-2 px-3 flex items-center space-x-3 hover:bg-emerald-50/50 dark:hover:bg-slate-800 transition-colors rounded-md"
             >
-              <div className="bg-emerald-100 text-emerald-800 p-2 rounded-full">
+              <div className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 p-2 rounded-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"

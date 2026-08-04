@@ -3,27 +3,27 @@ import Link from "next/link";
 // Hero component for the landing page
 export default function Hero() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-emerald-50 via-green-50/30 to-white py-20 sm:py-32">
+    <div className="relative overflow-hidden bg-gradient-to-b from-emerald-50 via-green-50/30 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-20 sm:py-32 transition-colors">
       {/* Decorative background shapes */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-200/40 rounded-full blur-3xl -z-10" />
-      <div className="absolute bottom-10 left-1/3 w-72 h-72 bg-amber-100/30 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-200/40 dark:bg-emerald-950/20 rounded-full blur-3xl -z-10" />
+      <div className="absolute bottom-10 left-1/3 w-72 h-72 bg-amber-100/30 dark:bg-amber-950/10 rounded-full blur-3xl -z-10" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
         {/* Badge */}
-        <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 tracking-wide uppercase shadow-sm border border-emerald-200 mb-6">
+        <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 tracking-wide uppercase shadow-sm border border-emerald-200 dark:border-emerald-800 mb-6">
           🏔️ Dedicated for Uttarakhand Farmers
         </span>
 
         {/* Main Title */}
-        <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight leading-none">
+        <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight leading-none">
           AI-Powered{" "}
-          <span className="bg-gradient-to-r from-emerald-600 to-green-700 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-emerald-600 to-green-700 dark:from-emerald-400 dark:to-green-500 bg-clip-text text-transparent">
             Crop Advisory Chatbot
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+        <p className="mt-6 text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto leading-relaxed">
           Helping Uttarakhand farmers get instant crop advisory support. Identify diseases, manage pests, and optimize yield for your hilly farms.
         </p>
 
@@ -51,14 +51,14 @@ export default function Hero() {
           </Link>
           <Link
             href="/about"
-            className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 border border-slate-200 text-base font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50 shadow-sm hover:shadow transition duration-200"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 border border-slate-200 dark:border-slate-800 text-base font-semibold rounded-xl text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm hover:shadow transition duration-200"
           >
             Learn More
           </Link>
         </div>
 
         {/* Small Trust Info */}
-        <div className="mt-8 flex justify-center items-center gap-6 text-sm text-slate-500">
+        <div className="mt-8 flex justify-center items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1">⏱️ 24/7 Availability</span>
           <span className="flex items-center gap-1">🗣️ Voice & Text Friendly</span>
           <span className="flex items-center gap-1">🏔️ local Hill Farming Guidance</span>

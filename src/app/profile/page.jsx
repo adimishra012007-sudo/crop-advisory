@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { Button, Toast, Loader } from "../../components/ui";
-import { logout, getToken, getUser, isAuthenticated } from "../../lib/auth";
+import { logout, getUser, isAuthenticated } from "../../lib/auth";
 import { getUserProfile } from "../../lib/api";
 
 export default function ProfilePage() {

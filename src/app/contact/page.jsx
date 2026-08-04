@@ -34,21 +34,21 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors">
       <Navbar />
 
       <main className="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col lg:flex-row gap-10">
         
         {/* Left Side: Contact Information Cards */}
         <section className="w-full lg:w-[40%] space-y-6">
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-            <span className="text-emerald-600 font-bold text-xs uppercase tracking-wider block mb-2">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider block mb-2">
               Get In Touch
             </span>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-4">
+            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight mb-4">
               Contact Us
             </h1>
-            <p className="text-sm text-slate-500 leading-relaxed">
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
               Have any questions, feedback, or suggestions regarding the crop advisory chatbot? Please reach out to our project team.
             </p>
           </div>
@@ -81,20 +81,20 @@ export default function ContactPage() {
         </section>
 
         {/* Right Side: Contact Form UI */}
-        <section className="flex-grow bg-white p-8 sm:p-12 rounded-3xl shadow-sm border border-slate-100">
-          <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+        <section className="flex-grow bg-white dark:bg-slate-900 p-8 sm:p-12 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
             <span>✉️</span> Send a Message
           </h2>
 
           {submitted && (
-            <div className="mb-6 p-4 bg-emerald-55 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl text-sm leading-relaxed animate-fadeIn">
-              <strong>🎉 Message Received!</strong> Thank you for your feedback. We will get back to you shortly. (Week 2 Frontend Form Demo)
+            <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-sm leading-relaxed animate-fadeIn">
+              <strong>🎉 Message Received!</strong> Thank you for your feedback. We will get back to you shortly.
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="name" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              <label htmlFor="name" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Farmer/User Name
               </label>
               <input
@@ -105,12 +105,12 @@ export default function ContactPage() {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="Enter your full name"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white text-sm transition-colors text-slate-700 font-medium"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 text-sm transition-colors text-slate-700 dark:text-slate-100 font-medium"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              <label htmlFor="email" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Email Address
               </label>
               <input
@@ -121,12 +121,12 @@ export default function ContactPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="Enter your email address"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white text-sm transition-colors text-slate-700 font-medium"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 text-sm transition-colors text-slate-700 dark:text-slate-100 font-medium"
               />
             </div>
 
             <div>
-              <label htmlFor="message" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              <label htmlFor="message" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Message / Feedback
               </label>
               <textarea
@@ -137,13 +137,13 @@ export default function ContactPage() {
                 value={formData.message}
                 onChange={handleInputChange}
                 placeholder="Type your questions or suggestions here..."
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white text-sm transition-colors text-slate-700 font-medium"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 text-sm transition-colors text-slate-700 dark:text-slate-100 font-medium"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full inline-flex items-center justify-center px-6 py-4 border border-transparent text-base font-bold rounded-xl text-white bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 shadow-sm hover:shadow transition-all duration-200"
+              className="w-full inline-flex items-center justify-center px-6 py-4 border border-transparent text-base font-bold rounded-xl text-white bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 shadow-sm hover:shadow transition-all duration-200 cursor-pointer"
             >
               Send Message
             </button>

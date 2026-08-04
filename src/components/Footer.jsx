@@ -41,7 +41,7 @@ export default function Footer() {
         {/* Copyright & Disclaimer */}
         <div className="flex flex-col md:flex-row justify-between items-center text-xs text-slate-500 gap-4">
           <p>© {currentYear} AI Crop Advisory Chatbot. All rights reserved.</p>
-          <p>Made for Uttarakhand Farmers • Week 2 Frontend Project</p>
+          <p>Made for Uttarakhand Farmers • Smart Crop Advisory System</p>
         </div>
       </div>
     </footer>

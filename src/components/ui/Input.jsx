@@ -22,7 +22,7 @@ export default function Input({
   className = "",
   ...props
 }) {
-  const inputId = React.useId();
+  const inputId = props.id || React.useId();
 
   return (
     <div className={`flex flex-col space-y-1.5 w-full ${className}`}>
