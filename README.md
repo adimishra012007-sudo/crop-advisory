@@ -10,7 +10,7 @@ An AI-powered smart agriculture and crop management advisory platform tailored f
 ## 🎥 Demo Video
 
 Demo Video:
-(To be updated after recording)
+(Add YouTube Unlisted link after recording)
 
 ## 📸 Screenshots
 
