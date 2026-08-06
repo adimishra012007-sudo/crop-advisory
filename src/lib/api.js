@@ -9,8 +9,13 @@ import { getToken, logout } from "./auth";
  */
 export const getApiBaseUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!envUrl) return "http://localhost:5000";
-  return envUrl.replace(/\/api\/crops\/?$/, "").replace(/\/$/, "");
+  if (envUrl && envUrl.trim() !== "") {
+    return envUrl.trim().replace(/\/api\/crops\/?$/, "").replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    return "https://crop-advisory-p0ng.onrender.com";
+  }
+  return "http://localhost:5000";
 };
 
 export const getCropsApiBase = () => `${getApiBaseUrl()}/api/crops`;

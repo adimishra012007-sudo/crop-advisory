@@ -19,27 +19,36 @@ const getGoogleCallbackUrl = (req) => {
   if (process.env.GOOGLE_CALLBACK_URL && process.env.GOOGLE_CALLBACK_URL.trim() !== "") {
     return process.env.GOOGLE_CALLBACK_URL.trim();
   }
-  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-  const host = req.get("host") || "localhost:5000";
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || (process.env.NODE_ENV === "production" ? "https" : "http");
+  const host = req.get("host") || (process.env.NODE_ENV === "production" ? "crop-advisory-p0ng.onrender.com" : "localhost:5000");
   return `${protocol}://${host}/api/users/google/callback`;
 };
 
 /**
  * Helper to dynamically determine the frontend redirect URL after OAuth.
  * Prefers process.env.CLIENT_REDIRECT_URL, with fallback to request origin or production Vercel URL.
+ * Always ensures the URL targets /login path to handle token and error query parameters properly.
  */
 const getClientRedirectUrl = (req) => {
+  let baseUrl = "";
   if (process.env.CLIENT_REDIRECT_URL && process.env.CLIENT_REDIRECT_URL.trim() !== "") {
-    return process.env.CLIENT_REDIRECT_URL.trim();
+    baseUrl = process.env.CLIENT_REDIRECT_URL.trim();
+  } else {
+    const origin = req.get("origin") || req.get("referer");
+    if (origin) {
+      try {
+        const parsed = new URL(origin);
+        baseUrl = parsed.origin;
+      } catch {}
+    }
   }
-  const origin = req.get("origin") || req.get("referer");
-  if (origin) {
-    try {
-      const parsed = new URL(origin);
-      return `${parsed.origin}/login`;
-    } catch {}
+  if (!baseUrl) {
+    baseUrl = "https://crop-advisory-tau.vercel.app";
   }
-  return "https://crop-advisory-tau.vercel.app/login";
+  if (!baseUrl.endsWith("/login")) {
+    baseUrl = baseUrl.replace(/\/$/, "") + "/login";
+  }
+  return baseUrl;
 };
 
 export const userController = {

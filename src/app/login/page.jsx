@@ -25,8 +25,10 @@ export default function LoginPage() {
     if (errorParam) {
       if (errorParam === "cancelled") {
         triggerToast("Google authentication was cancelled.", "error");
+      } else if (errorParam === "expired") {
+        triggerToast("Session expired. Please log in again.", "error");
       } else {
-        triggerToast("Google authentication failed.", "error");
+        triggerToast(`Google authentication failed: ${errorParam}`, "error");
       }
       // Clean up URL
       router.replace("/login");

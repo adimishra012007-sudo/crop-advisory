@@ -1,9 +1,4 @@
-// Helper to get base API URL from environment variables
-const getApiBaseUrl = () => {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!envUrl) return "http://localhost:5000";
-  return envUrl.replace(/\/api\/crops\/?$/, "").replace(/\/$/, "");
-};
+import { getApiBaseUrl } from "./api";
 
 const getAuthApiBase = () => `${getApiBaseUrl()}/api/users`;
 
