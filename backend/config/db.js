@@ -5,6 +5,7 @@ const { Pool } = pkg;
 
 let pool;
 let isDbConnected = false;
+let lastDbError = null;
 
 /**
  * Connects to the Supabase PostgreSQL database with retry logic.
@@ -49,6 +50,7 @@ const connectDB = async () => {
         console.log(`Retrying database connection in ${delay / 1000} seconds... (${retries} attempts left)`);
         setTimeout(() => connectWithRetry(retries - 1, delay), delay);
       } else {
+        lastDbError = sanitizedMsg;
         console.warn("Max retries reached. The server will continue to run, but database operations will fail until a valid connection is established.");
       }
     }
@@ -153,6 +155,10 @@ export const query = (text, params) => {
 
 export const getDbStatus = () => {
   return isDbConnected;
+};
+
+export const getLastDbError = () => {
+  return lastDbError;
 };
 
 export default connectDB;

@@ -59,7 +59,11 @@ app.use(express.json());
 
 // Base diagnostic endpoint
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "healthy" });
+  import("./config/db.js").then(({ getDbStatus, getLastDbError }) => {
+    res.status(200).json({ status: "healthy", dbConnected: getDbStatus(), error: getLastDbError() });
+  }).catch(err => {
+    res.status(200).json({ status: "healthy", dbConnected: false, error: err.message });
+  });
 });
 
 // Register Crop REST routes
