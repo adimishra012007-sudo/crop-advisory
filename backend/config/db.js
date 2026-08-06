@@ -8,7 +8,7 @@ let isDbConnected = false;
 let lastDbError = null;
 
 /**
- * Connects to the Supabase PostgreSQL database with retry logic.
+ * Connects to the Supabase PostgreSQL database with robust configuration and retry logic.
  */
 const connectDB = async () => {
   if (!process.env.DATABASE_URL) {
@@ -16,16 +16,21 @@ const connectDB = async () => {
     return;
   }
 
-  const sslConfig = process.env.NODE_ENV === "production"
-    ? { rejectUnauthorized: false }
-    : (process.env.DATABASE_URL.includes("localhost") || process.env.DATABASE_URL.includes("127.0.0.1") ? false : { rejectUnauthorized: false });
-
-  pool = new Pool({
+  // Supabase Pooler (port 6543) requires explicit SSL handling in pg
+  const isSupabase = process.env.DATABASE_URL.includes("supabase.com") || process.env.DATABASE_URL.includes("supabase.co");
+  
+  const poolConfig = {
     connectionString: process.env.DATABASE_URL,
-    ssl: sslConfig,
     connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 30000,
-  });
+    max: 10,
+  };
+
+  if (process.env.NODE_ENV === "production" || isSupabase) {
+    poolConfig.ssl = { rejectUnauthorized: false };
+  }
+
+  pool = new Pool(poolConfig);
 
   pool.on("error", (err) => {
     console.error("Unexpected error on idle client", err);
@@ -43,6 +48,7 @@ const connectDB = async () => {
       await initializeDatabase();
     } catch (error) {
       isDbConnected = false;
+      lastDbError = error.message;
       const sanitizedMsg = String(error.message || "").replace(/:\/\/[^:]+:[^@]+@/, "://***:***@");
       console.error(`PostgreSQL connection failure: ${sanitizedMsg}`);
       
@@ -50,7 +56,6 @@ const connectDB = async () => {
         console.log(`Retrying database connection in ${delay / 1000} seconds... (${retries} attempts left)`);
         setTimeout(() => connectWithRetry(retries - 1, delay), delay);
       } else {
-        lastDbError = sanitizedMsg;
         console.warn("Max retries reached. The server will continue to run, but database operations will fail until a valid connection is established.");
       }
     }
