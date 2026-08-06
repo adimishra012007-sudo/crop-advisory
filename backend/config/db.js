@@ -7,35 +7,54 @@ let pool;
 let isDbConnected = false;
 
 /**
- * Connects to the Supabase PostgreSQL database.
+ * Connects to the Supabase PostgreSQL database with retry logic.
  */
 const connectDB = async () => {
-  try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL environment variable is missing from your .env configuration.");
-    }
-
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false, // Required for Supabase in many hosting setups
-      },
-    });
-
-    // Test connection
-    const client = await pool.connect();
-    console.log("PostgreSQL Connected to Supabase");
-    client.release();
-    isDbConnected = true;
-
-    // Run table initialization and seeding
-    await initializeDatabase();
-  } catch (error) {
-    isDbConnected = false;
-    const sanitizedMsg = String(error.message || "").replace(/:\/\/[^:]+:[^@]+@/, "://***:***@");
-    console.error(`PostgreSQL connection failure: ${sanitizedMsg}`);
-    console.warn("The server will continue to run, but database operations will fail until a valid connection is established.");
+  if (!process.env.DATABASE_URL) {
+    console.error("DATABASE_URL environment variable is missing from your .env configuration.");
+    return;
   }
+
+  const sslConfig = process.env.NODE_ENV === "production"
+    ? { rejectUnauthorized: false }
+    : (process.env.DATABASE_URL.includes("localhost") || process.env.DATABASE_URL.includes("127.0.0.1") ? false : { rejectUnauthorized: false });
+
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: sslConfig,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+  });
+
+  pool.on("error", (err) => {
+    console.error("Unexpected error on idle client", err);
+    isDbConnected = false;
+  });
+
+  const connectWithRetry = async (retries = 5, delay = 5000) => {
+    try {
+      const client = await pool.connect();
+      console.log("PostgreSQL Connected to Supabase");
+      client.release();
+      isDbConnected = true;
+
+      // Run table initialization and seeding
+      await initializeDatabase();
+    } catch (error) {
+      isDbConnected = false;
+      const sanitizedMsg = String(error.message || "").replace(/:\/\/[^:]+:[^@]+@/, "://***:***@");
+      console.error(`PostgreSQL connection failure: ${sanitizedMsg}`);
+      
+      if (retries > 0) {
+        console.log(`Retrying database connection in ${delay / 1000} seconds... (${retries} attempts left)`);
+        setTimeout(() => connectWithRetry(retries - 1, delay), delay);
+      } else {
+        console.warn("Max retries reached. The server will continue to run, but database operations will fail until a valid connection is established.");
+      }
+    }
+  };
+
+  await connectWithRetry();
 };
 
 /**
