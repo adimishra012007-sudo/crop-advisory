@@ -13,23 +13,28 @@ const generateToken = (id) => {
 
 /**
  * Helper to dynamically determine the exact Google OAuth callback URL.
- * Prefers process.env.GOOGLE_CALLBACK_URL, with fallback to current request protocol and host.
+ * Strongly enforces production URL when in production environment to prevent mismatches.
  */
 const getGoogleCallbackUrl = (req) => {
+  if (process.env.NODE_ENV === "production") {
+    return "https://crop-advisory-p0ng.onrender.com/api/users/google/callback";
+  }
   if (process.env.GOOGLE_CALLBACK_URL && process.env.GOOGLE_CALLBACK_URL.trim() !== "") {
     return process.env.GOOGLE_CALLBACK_URL.trim();
   }
-  const protocol = req.headers["x-forwarded-proto"] || req.protocol || (process.env.NODE_ENV === "production" ? "https" : "http");
-  const host = req.get("host") || (process.env.NODE_ENV === "production" ? "crop-advisory-p0ng.onrender.com" : "localhost:5000");
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
+  const host = req.get("host") || "localhost:5000";
   return `${protocol}://${host}/api/users/google/callback`;
 };
 
 /**
  * Helper to dynamically determine the frontend redirect URL after OAuth.
- * Prefers process.env.CLIENT_REDIRECT_URL, with fallback to request origin or production Vercel URL.
- * Always ensures the URL targets /login path to handle token and error query parameters properly.
+ * Strongly enforces production Vercel URL when in production environment.
  */
 const getClientRedirectUrl = (req) => {
+  if (process.env.NODE_ENV === "production") {
+    return "https://crop-advisory-tau.vercel.app/login";
+  }
   let baseUrl = "";
   if (process.env.CLIENT_REDIRECT_URL && process.env.CLIENT_REDIRECT_URL.trim() !== "") {
     baseUrl = process.env.CLIENT_REDIRECT_URL.trim();
@@ -43,7 +48,7 @@ const getClientRedirectUrl = (req) => {
     }
   }
   if (!baseUrl) {
-    baseUrl = "https://crop-advisory-tau.vercel.app";
+    baseUrl = "http://localhost:3000";
   }
   if (!baseUrl.endsWith("/login")) {
     baseUrl = baseUrl.replace(/\/$/, "") + "/login";
@@ -220,6 +225,10 @@ export const userController = {
       const clientId = process.env.GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
       const callbackUrl = getGoogleCallbackUrl(req);
+
+      console.log(`[OAuth Debug] Expected redirect_uri: ${callbackUrl}`);
+      console.log(`[OAuth Debug] Client ID configured: ${!!clientId}`);
+      console.log(`[OAuth Debug] Client Secret configured: ${!!clientSecret}`);
 
       if (!clientId || !clientSecret) {
         console.error("Google OAuth credentials are not fully configured in environment variables.");
